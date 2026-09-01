@@ -31,3 +31,20 @@ just bump `versionCode`).
   DIMENSIONAL TEAR, SOUL ECHO, PIXEL POSSESSION, FLESH CIRCUIT
 - 3 new presets: ABYSSAL DREAM, FULL POSSESSION, FLESH REACTOR
 - V7 saved state migrates forward automatically
+
+## V9: CHRONO ENGINE (2026-09-01)
+Incorporated CHRONO-STUDIO v11's temporal mechanics into the WebGL pipeline (nothing removed):
+- 8-layer temporal ring buffer (GPU render targets) + cheap blit pass — GPU refinement of
+  chrono's 120-frame CPU ring store
+- TIME DEPTH + 8 DEPTH MODES (LUMA/CHROMA/INVERT/RADIAL/QUANTUM/EDGE/POSTER/SOLAR):
+  per-pixel depth value selects which past frame to draw from
+- TIME VORTEX: deeper layers rotate/zoom harder, mirror-folded coords (refined tile-flip)
+- WARP/SEP: row+liquid column waves shift the temporal index
+- TEMPORAL GLITCH: RGB channels sampled from different depths in time
+- JANUS GATE: |now - deepest past| aura (chrono's fallback mode, GPU-native)
+- LAMBDA LOOP: difference-energy injection
+- HOLO VEIL: luma-driven oscillating chromatic shear
+- DATA CLOUD: depth-displaced dot field (chrono CLOUD, shader-native)
+- TIME LOCK: freezes the ring (chrono's HOLD-TO-FREEZE-TIME)
+- AUDIO REACT: mic analyser drives depth reach / vortex / holo (RECORD_AUDIO added)
+- 2 new presets: CHRONO CANON, JANUS PROTOCOL; saved state migrates V7/V8 -> V9

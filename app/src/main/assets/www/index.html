@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>Omni-Reality ULTRA [V8: FORBIDDEN TRANSMISSIONS]</title>
+    <title>Omni-Reality ULTRA [V9: CHRONO ENGINE]</title>
     <style>
         body {
             margin: 0;
@@ -266,7 +266,65 @@
                     <option value="ABYSSAL DREAM">ABYSSAL DREAM</option>
                     <option value="FULL POSSESSION">FULL POSSESSION</option>
                     <option value="FLESH REACTOR">FLESH REACTOR</option>
+                    <option value="CHRONO CANON">CHRONO CANON</option>
+                    <option value="JANUS PROTOCOL">JANUS PROTOCOL</option>
                 </select>
+            </div>
+
+            <!-- CHRONO ENGINE (NEW V9) -->
+            <div class="section-header" style="color: #7df9ff; border-bottom-color: #227788; background: rgba(0,18,25,0.95);">// CHRONO ENGINE [V9]</div>
+            <div class="control-group">
+                <label style="color:#bbeeff">DEPTH MODE</label>
+                <select id="chrono-mode">
+                    <option value="0">LUMA (brightness = time)</option>
+                    <option value="1">CHROMA (color split = time)</option>
+                    <option value="2">INVERT (darkness = time)</option>
+                    <option value="3">RADIAL (center = deepest)</option>
+                    <option value="4">QUANTUM (checker superposition)</option>
+                    <option value="5">EDGE (edges reach back)</option>
+                    <option value="6">POSTER (stepped time)</option>
+                    <option value="7">SOLAR (eclipse curve)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">TIME DEPTH <span class="value-display" id="val-timeDepth">0.0</span></label>
+                <input type="range" id="timeDepth" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">TIME VORTEX <span class="value-display" id="val-timeVortex">0.0</span></label>
+                <input type="range" id="timeVortex" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">WARP / SEP <span class="value-display" id="val-warpSep">0.0</span></label>
+                <input type="range" id="warpSep" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">TEMPORAL GLITCH <span class="value-display" id="val-tempGlitch">0.0</span></label>
+                <input type="range" id="tempGlitch" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">JANUS GATE <span class="value-display" id="val-janus">0.0</span></label>
+                <input type="range" id="janus" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">LAMBDA LOOP <span class="value-display" id="val-lambda">0.0</span></label>
+                <input type="range" id="lambda" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">HOLO VEIL <span class="value-display" id="val-holo">0.0</span></label>
+                <input type="range" id="holo" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">DATA CLOUD <span class="value-display" id="val-dataCloud">0.0</span></label>
+                <input type="range" id="dataCloud" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">TIME LOCK <span class="value-display" id="val-timeLock">0.0</span></label>
+                <input type="range" id="timeLock" min="0.0" max="1.0" step="1.0" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#bbeeff">AUDIO REACT <span class="value-display" id="val-audioReact">0.0</span></label>
+                <input type="range" id="audioReact" min="0.0" max="1.0" step="0.01" value="0">
             </div>
 
             <!-- HYPERDRIVE (NEW V7) -->
@@ -597,6 +655,15 @@
             rtOld = new THREE.WebGLRenderTarget(db.x, db.y, rtParams);
             rtNew = new THREE.WebGLRenderTarget(db.x, db.y, rtParams);
 
+            // Chrono Engine (V9): 8-layer temporal ring buffer + cheap blit pass
+            const RING = 8;
+            const ringRTs = [];
+            for (let ri = 0; ri < RING; ri++) ringRTs.push(new THREE.WebGLRenderTarget(db.x, db.y, rtParams));
+            let ringHead = 0;
+            const copyMat = new THREE.MeshBasicMaterial({ map: rtNew.texture });
+            const copyScene = new THREE.Scene();
+            copyScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMat));
+
             // --- 3. SHADER DEFINITION ---
             const vertexShader = `
                 varying vec2 vUv;
@@ -612,6 +679,29 @@
                 uniform float uTime;
                 uniform float uFlipCam;
                 uniform vec2 uTexel;
+
+                // Chrono Engine (V9) - 8-layer temporal ring buffer
+                uniform sampler2D uHist0;
+                uniform sampler2D uHist1;
+                uniform sampler2D uHist2;
+                uniform sampler2D uHist3;
+                uniform sampler2D uHist4;
+                uniform sampler2D uHist5;
+                uniform sampler2D uHist6;
+                uniform sampler2D uHist7;
+                uniform int uChronoMode;
+                uniform float uTimeDepth;
+                uniform float uTimeVortex;
+                uniform float uWarpSep;
+                uniform float uTempGlitch;
+                uniform float uJanus;
+                uniform float uLambda;
+                uniform float uHolo;
+                uniform float uDataCloud;
+                uniform float uTimeLock;
+                uniform float uAudioReact;
+                uniform float uBass;
+                uniform float uTreble;
 
                 // Forbidden Transmissions (V8)
                 uniform float uDream;
@@ -698,6 +788,22 @@
 
                 float rand(vec2 co){
                     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+                }
+
+                vec3 sampleRing(int i, vec2 uv) {
+                    uv = clamp(uv, 0.0, 1.0);
+                    if(i <= 0) return texture2D(uHist0, uv).rgb;
+                    if(i == 1) return texture2D(uHist1, uv).rgb;
+                    if(i == 2) return texture2D(uHist2, uv).rgb;
+                    if(i == 3) return texture2D(uHist3, uv).rgb;
+                    if(i == 4) return texture2D(uHist4, uv).rgb;
+                    if(i == 5) return texture2D(uHist5, uv).rgb;
+                    if(i == 6) return texture2D(uHist6, uv).rgb;
+                    return texture2D(uHist7, uv).rgb;
+                }
+
+                float mirrorFold(float t) {
+                    return 1.0 - abs(1.0 - mod(t, 2.0));
                 }
 
                 float vnoise(vec2 p){
@@ -929,6 +1035,84 @@
                     }
 
                     // --- POST-PROCESS EFFECTS ---
+
+                    // ============ CHRONO ENGINE (V9) ============
+                    // Temporal displacement: a depth value (per mode) selects which
+                    // PAST frame each pixel is drawn from. History lives in an
+                    // 8-layer ring buffer of previous output frames.
+                    if(uTimeDepth > 0.001) {
+                        vec3 probe = texture2D(uNewFrame, glitchUV).rgb;
+
+                        // Depth value by chrono mode (refined from CHRONO-STUDIO v11)
+                        float dv;
+                        if(uChronoMode == 0)      dv = luma(probe);                                   // LUMA
+                        else if(uChronoMode == 1) dv = abs(probe.r - probe.b);                        // CHROMA
+                        else if(uChronoMode == 2) dv = 1.0 - luma(probe);                             // INVERT
+                        else if(uChronoMode == 3) {                                                   // RADIAL
+                            vec2 rp = uv - 0.5; rp.x *= uAspect;
+                            dv = 1.0 - clamp(length(rp) * 1.6, 0.0, 1.0);
+                        }
+                        else if(uChronoMode == 4) {                                                   // QUANTUM
+                            float chk = mod(floor(uv.x * 80.0) + floor(uv.y * 80.0), 2.0);
+                            dv = mix(luma(probe), 1.0 - luma(probe), chk);
+                        }
+                        else if(uChronoMode == 5) dv = min(getEdge(uNewFrame, glitchUV) * 3.0, 1.0);  // EDGE
+                        else if(uChronoMode == 6) dv = floor(luma(probe) * 5.0) / 5.0;                // POSTER
+                        else { float sv = luma(probe); dv = sv > 0.5 ? 1.0 - sv : sv; }               // SOLAR
+
+                        // Audio-reactive drive: bass pumps the depth reach
+                        float depthMax = uTimeDepth * 7.0 * (1.0 + uBass * uAudioReact * 1.5);
+
+                        // Temporal index, warped by row waves + liquid column waves (WARP/SEP)
+                        float layerF = (1.0 - dv) * depthMax;
+                        layerF += sin(uv.y * 28.0 + uTime * 2.5) * uWarpSep * 3.0;
+                        layerF += cos(uv.x * 22.0 - uTime * 2.0) * uWarpSep * 1.5;
+
+                        int layer = int(clamp(layerF, 0.0, 7.0) + 0.5);
+
+                        // TIME VORTEX: deeper layers rotate & zoom harder (time tunnel),
+                        // mirror-folded coords keep sampling in-bounds (refined tile-flip)
+                        vec2 cuv = glitchUV;
+                        if(uTimeVortex > 0.0) {
+                            float fl = float(layer);
+                            vec2 vp = cuv - 0.5;
+                            float va = fl * uTimeVortex * 0.35
+                                     + uTimeVortex * sin(uTime * 0.6) * 0.2
+                                     + uTreble * uAudioReact * 0.5;
+                            float vs = sin(va), vc = cos(va);
+                            float vz = 1.0 + uTimeVortex * 0.25 - fl * uTimeVortex * 0.02;
+                            cuv = vec2(vp.x * vc - vp.y * vs, vp.x * vs + vp.y * vc) * vz + 0.5;
+                            cuv = vec2(mirrorFold(cuv.x), mirrorFold(cuv.y));
+                        }
+
+                        // TEMPORAL GLITCH: RGB channels pulled from different depths in time
+                        vec3 past;
+                        if(uTempGlitch > 0.001) {
+                            int dl = int(uTempGlitch * 3.0 + 0.5);
+                            int la = layer + dl; if(la > 7) la = 7;
+                            int lb = layer - dl; if(lb < 0) lb = 0;
+                            past = vec3(sampleRing(layer, cuv).r,
+                                        sampleRing(la, cuv).g,
+                                        sampleRing(lb, cuv).b);
+                        } else {
+                            past = sampleRing(layer, cuv);
+                        }
+
+                        finalRGB = mix(finalRGB, past, min(uTimeDepth * 1.5, 1.0));
+
+                        // JANUS GATE: aura of the difference between NOW and the deepest past
+                        if(uJanus > 0.0) {
+                            vec3 deepPast = sampleRing(7, glitchUV);
+                            finalRGB += abs(probe - deepPast) * uJanus * 1.5;
+                        }
+
+                        // LAMBDA LOOP: difference energy fed forward into the output
+                        if(uLambda > 0.0) {
+                            vec3 delta = abs(probe - past);
+                            finalRGB = mix(finalRGB, delta * 2.0, uLambda * 0.7);
+                        }
+                    }
+
 
                     // Motion Magma (Interactive)
                     if(uMagma > 0.0) {
@@ -1168,6 +1352,28 @@
 
                     if(uColorShift > 0.0) finalRGB = hueShift(finalRGB, uColorShift);
 
+                    // Holo Veil (V9) - luma-driven oscillating chromatic shear
+                    if(uHolo > 0.0) {
+                        float hl = luma(finalRGB);
+                        float hshift = (hl - 0.5) * uHolo * 0.06
+                                       * sin(uTime * 3.0 + uTreble * uAudioReact * 6.0);
+                        float hr2 = texture2D(uNewFrame, glitchUV + vec2(hshift, 0.0)).r;
+                        float hb2 = texture2D(uNewFrame, glitchUV - vec2(hshift, 0.0)).b;
+                        finalRGB = mix(finalRGB, vec3(hr2, finalRGB.g, hb2), uHolo);
+                    }
+
+                    // Data Cloud (V9) - depth-displaced dot field
+                    if(uDataCloud > 0.0) {
+                        float cells = mix(220.0, 60.0, uDataCloud);
+                        vec2 gridUV = (floor(uv * cells) + 0.5) / cells;
+                        vec3 cellCol = texture2D(uNewFrame, gridUV).rgb;
+                        float cdepth = (luma(cellCol) - 0.5) * uDataCloud * 12.0;
+                        vec2 local = fract(uv * cells);
+                        local.y -= cdepth;
+                        float dotMask = smoothstep(0.38, 0.30, length(local - 0.5));
+                        finalRGB = mix(finalRGB, cellCol * dotMask, uDataCloud * 0.9);
+                    }
+
                     // Film Grain (V7) - applied last so it sits on top
                     if(uGrain > 0.0) {
                         float g = rand(uv * vec2(1234.0, 876.0) + fract(uTime) * 100.0) - 0.5;
@@ -1188,6 +1394,28 @@
                     uFlipCam: { value: 1.0 },   // front camera starts mirrored
                     uTexel: { value: new THREE.Vector2(1.0 / db.x, 1.0 / db.y) },
                     uAspect: { value: db.x / db.y },
+
+                    uHist0: { value: ringRTs[0].texture },
+                    uHist1: { value: ringRTs[1].texture },
+                    uHist2: { value: ringRTs[2].texture },
+                    uHist3: { value: ringRTs[3].texture },
+                    uHist4: { value: ringRTs[4].texture },
+                    uHist5: { value: ringRTs[5].texture },
+                    uHist6: { value: ringRTs[6].texture },
+                    uHist7: { value: ringRTs[7].texture },
+                    uChronoMode: { value: 0 },
+                    uTimeDepth: { value: 0.0 },
+                    uTimeVortex: { value: 0.0 },
+                    uWarpSep: { value: 0.0 },
+                    uTempGlitch: { value: 0.0 },
+                    uJanus: { value: 0.0 },
+                    uLambda: { value: 0.0 },
+                    uHolo: { value: 0.0 },
+                    uDataCloud: { value: 0.0 },
+                    uTimeLock: { value: 0.0 },
+                    uAudioReact: { value: 0.0 },
+                    uBass: { value: 0.0 },
+                    uTreble: { value: 0.0 },
 
                     uDream: { value: 0.0 },
                     uRain: { value: 0.0 },
@@ -1275,6 +1503,7 @@
                 const sz = renderer.getDrawingBufferSize(new THREE.Vector2());
                 rtOld.setSize(sz.x, sz.y);
                 rtNew.setSize(sz.x, sz.y);
+                ringRTs.forEach(rt => rt.setSize(sz.x, sz.y));
                 material.uniforms.uTexel.value.set(1.0 / sz.x, 1.0 / sz.y);
                 material.uniforms.uAspect.value = sz.x / sz.y;
             }
@@ -1320,6 +1549,23 @@
                 clock += Math.min(dt, 50) * 0.001;   // time follows real elapsed time (slow-mo safe)
                 material.uniforms.uTime.value = clock;
 
+                // Chrono Engine (V9): audio analysis -> drive uniforms
+                if (analyser && material.uniforms.uAudioReact.value > 0) {
+                    analyser.getByteFrequencyData(audioData);
+                    let bSum = 0, tSum = 0;
+                    for (let ai = 0; ai < 10; ai++) bSum += audioData[ai];
+                    for (let ak = 80; ak < 120; ak++) tSum += audioData[ak];
+                    const bass = bSum / (10 * 255), treble = tSum / (40 * 255);
+                    material.uniforms.uBass.value = material.uniforms.uBass.value * 0.8 + bass * 0.2;
+                    material.uniforms.uTreble.value = material.uniforms.uTreble.value * 0.8 + treble * 0.2;
+                }
+
+                // Wire ring so uHist0 is always the NEWEST stored output frame
+                for (let hi = 0; hi < RING; hi++) {
+                    const slot = (ringHead - 1 - hi + RING * 2) % RING;
+                    material.uniforms['uHist' + hi].value = ringRTs[slot].texture;
+                }
+
                 material.uniforms.uOldFrame.value = rtOld.texture;
 
                 renderer.setRenderTarget(rtNew);
@@ -1331,6 +1577,16 @@
                 const temp = rtOld;
                 rtOld = rtNew;
                 rtNew = temp;
+
+                // Chrono Engine (V9): store this frame in the temporal ring
+                // (TIME LOCK > 0.5 freezes history — the "HOLD TO FREEZE TIME" of chrono)
+                if (material.uniforms.uTimeLock.value < 0.5) {
+                    copyMat.map = rtOld.texture;   // just-rendered frame after swap
+                    renderer.setRenderTarget(ringRTs[ringHead]);
+                    renderer.render(copyScene, camera);
+                    renderer.setRenderTarget(null);
+                    ringHead = (ringHead + 1) % RING;
+                }
 
                 if(video && video.readyState === video.HAVE_ENOUGH_DATA) {
                     videoTexture.needsUpdate = true;
@@ -1409,6 +1665,30 @@
             hideToast();
         }
 
+        // --- CHRONO AUDIO LINK (V9): mic -> analyser -> uBass/uTreble ---
+        let audioCtx = null, analyser = null, audioData = null, audioTried = false;
+        async function initAudioLink() {
+            if (audioTried) return;
+            audioTried = true;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+                });
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+                const src = audioCtx.createMediaStreamSource(stream);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                audioData = new Uint8Array(analyser.frequencyBinCount);
+                src.connect(analyser);
+                toast("AUDIO LINK ESTABLISHED");
+            } catch (e) {
+                toast("MIC DENIED - AUDIO REACT OFFLINE");
+                const sl = document.getElementById('audioReact');
+                if (sl) { sl.value = 0; sl.dispatchEvent(new Event('input')); }
+            }
+        }
+
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -1429,7 +1709,9 @@
             "STROBE SENTIENCE": { strobe: 0.5, edgeCrawl: 0.7, freeze: 0.3, ripple: 0.5 },
             "ABYSSAL DREAM":    { dream: 0.9, singularity: 0.5, bloom: 0.4, echo: 0.4 },
             "FULL POSSESSION":  { possession: 0.7, rain: 0.5, vhs: 0.4, tear: 0.6, grain: 0.3 },
-            "FLESH REACTOR":    { flesh: 0.8, bioHorror: 0.4, nerve: 0.5, magma: 0.4 }
+            "FLESH REACTOR":    { flesh: 0.8, bioHorror: 0.4, nerve: 0.5, magma: 0.4 },
+            "CHRONO CANON":     { timeDepth: 0.8, timeVortex: 0.5, warpSep: 0.4, holo: 0.5, bloom: 0.4 },
+            "JANUS PROTOCOL":   { timeDepth: 0.6, janus: 0.8, lambda: 0.5, tempGlitch: 0.4, echo: 0.3 }
         };
 
         function zeroAll() {
@@ -1458,17 +1740,24 @@
                 try {
                     const state = {};
                     document.querySelectorAll('input[type=range]').forEach(s => { state[s.id] = s.value; });
-                    localStorage.setItem('omniRealityV8', JSON.stringify(state));
+                    state['__chronoMode'] = document.getElementById('chrono-mode').value;
+                    localStorage.setItem('omniRealityV9', JSON.stringify(state));
                 } catch (e) {}
             }, 400);
         }
 
         function restoreState() {
             try {
-                const raw = localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
+                const raw = localStorage.getItem('omniRealityV9') || localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
                 if (!raw) return;
                 const state = JSON.parse(raw);
                 for (const [id, val] of Object.entries(state)) {
+                    if (id === '__chronoMode') {
+                        const sel = document.getElementById('chrono-mode');
+                        sel.value = val;
+                        material.uniforms.uChronoMode.value = parseInt(val, 10) || 0;
+                        continue;
+                    }
                     const s = document.getElementById(id);
                     if (s) { s.value = val; s.dispatchEvent(new Event('input')); }
                 }
@@ -1489,6 +1778,8 @@
 
                     const display = document.getElementById('val-' + id);
                     if(display) display.innerText = val.toFixed(2);
+
+                    if (id === 'audioReact' && val > 0) initAudioLink();
 
                     saveState();
                 });
@@ -1527,7 +1818,7 @@
 
             document.getElementById('btn-reset').addEventListener('click', () => {
                 haptic(30);
-                try { localStorage.removeItem('omniRealityV8'); localStorage.removeItem('omniRealityV7'); } catch (e) {}
+                try { localStorage.removeItem('omniRealityV9'); localStorage.removeItem('omniRealityV8'); localStorage.removeItem('omniRealityV7'); } catch (e) {}
                 zeroAll();
                 document.getElementById('preset-select').value = "";
                 toast("ZERO STATE ACHIEVED");
@@ -1536,6 +1827,12 @@
             document.getElementById('preset-select').addEventListener('change', (e) => {
                 haptic();
                 if (e.target.value) applyPreset(e.target.value);
+            });
+
+            document.getElementById('chrono-mode').addEventListener('change', (e) => {
+                haptic();
+                material.uniforms.uChronoMode.value = parseInt(e.target.value, 10);
+                saveState();
             });
 
             const btnRecord = document.getElementById('btn-record');

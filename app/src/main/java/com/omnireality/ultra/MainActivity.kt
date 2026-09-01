@@ -26,11 +26,21 @@ class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private var pendingPermissionRequest: PermissionRequest? = null
 
-    // Runtime CAMERA permission -> then answer the WebView's PermissionRequest
-    private val cameraPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    // Runtime CAMERA/MIC permissions -> then answer the WebView's PermissionRequest
+    private val mediaPermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
             pendingPermissionRequest?.let { req ->
-                if (granted) req.grant(req.resources) else req.deny()
+                val wantsAudio = req.resources.any { it == PermissionRequest.RESOURCE_AUDIO_CAPTURE }
+                val wantsVideo = req.resources.any { it == PermissionRequest.RESOURCE_VIDEO_CAPTURE }
+                val camOk = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                val micOk = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                val allowed = req.resources.filter {
+                    (it == PermissionRequest.RESOURCE_VIDEO_CAPTURE && camOk) ||
+                    (it == PermissionRequest.RESOURCE_AUDIO_CAPTURE && micOk)
+                }.toTypedArray()
+                if (allowed.isNotEmpty() &&
+                    (!wantsVideo || camOk) && (!wantsAudio || micOk)
+                ) req.grant(allowed) else req.deny()
                 pendingPermissionRequest = null
             }
         }
@@ -62,15 +72,21 @@ class MainActivity : ComponentActivity() {
                 val wantsCamera = request.resources.any {
                     it == PermissionRequest.RESOURCE_VIDEO_CAPTURE
                 }
-                if (wantsCamera) {
-                    if (checkSelfPermission(Manifest.permission.CAMERA) ==
-                        PackageManager.PERMISSION_GRANTED
-                    ) {
-                        request.grant(request.resources)
-                    } else {
-                        pendingPermissionRequest = request
-                        cameraPermission.launch(Manifest.permission.CAMERA)
-                    }
+                val wantsMic = request.resources.any {
+                    it == PermissionRequest.RESOURCE_AUDIO_CAPTURE
+                }
+                val needed = mutableListOf<String>()
+                if (wantsCamera && checkSelfPermission(Manifest.permission.CAMERA) !=
+                    PackageManager.PERMISSION_GRANTED
+                ) needed.add(Manifest.permission.CAMERA)
+                if (wantsMic && checkSelfPermission(Manifest.permission.RECORD_AUDIO) !=
+                    PackageManager.PERMISSION_GRANTED
+                ) needed.add(Manifest.permission.RECORD_AUDIO)
+                if (needed.isEmpty()) {
+                    request.grant(request.resources)
+                } else if (wantsCamera || wantsMic) {
+                    pendingPermissionRequest = request
+                    mediaPermissions.launch(needed.toTypedArray())
                 } else {
                     request.deny()
                 }
