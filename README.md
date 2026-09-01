@@ -22,3 +22,12 @@ Artifacts: `app-debug.apk`, `app-release.apk`.
 ## Install
 Sideload `app-release.apk` (same debug key across builds -> updates install in place;
 just bump `versionCode`).
+
+## V8: FORBIDDEN TRANSMISSIONS (2026-09-01)
+- Fixed: NERVE ENDING div-by-zero blowout, DEMON CORE dead jitter (now resamples),
+  TIME RIPPLE instant death (residual ripples), NEURAL PULSE negative mix weight,
+  SPIRIT hard edge cutoff (smooth fade)
+- 8 new effects: DREAM RECURSION, GLITCH RAIN, ASTRAL PROJECTION, VOID SINGULARITY,
+  DIMENSIONAL TEAR, SOUL ECHO, PIXEL POSSESSION, FLESH CIRCUIT
+- 3 new presets: ABYSSAL DREAM, FULL POSSESSION, FLESH REACTOR
+- V7 saved state migrates forward automatically

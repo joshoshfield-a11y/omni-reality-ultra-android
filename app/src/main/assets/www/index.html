@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>Omni-Reality ULTRA [V7: HYPERDRIVE]</title>
+    <title>Omni-Reality ULTRA [V8: FORBIDDEN TRANSMISSIONS]</title>
     <style>
         body {
             margin: 0;
@@ -263,6 +263,9 @@
                     <option value="VHS DEAD CHANNEL">VHS DEAD CHANNEL</option>
                     <option value="EVENT HORIZON">EVENT HORIZON</option>
                     <option value="STROBE SENTIENCE">STROBE SENTIENCE</option>
+                    <option value="ABYSSAL DREAM">ABYSSAL DREAM</option>
+                    <option value="FULL POSSESSION">FULL POSSESSION</option>
+                    <option value="FLESH REACTOR">FLESH REACTOR</option>
                 </select>
             </div>
 
@@ -283,6 +286,41 @@
             <div class="control-group">
                 <label style="color:#ffdd99">PHOTON STROBE <span class="value-display" id="val-strobe">0.0</span></label>
                 <input type="range" id="strobe" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+            <!-- FORBIDDEN TRANSMISSIONS (NEW V8) -->
+            <div class="section-header" style="color: #ff6600; border-bottom-color: #883300; background: rgba(35,10,0,0.95);">// FORBIDDEN TRANSMISSIONS [V8]</div>
+            <div class="control-group">
+                <label style="color:#ffbb88">DREAM RECURSION <span class="value-display" id="val-dream">0.0</span></label>
+                <input type="range" id="dream" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffbb88">GLITCH RAIN <span class="value-display" id="val-rain">0.0</span></label>
+                <input type="range" id="rain" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffbb88">ASTRAL PROJECTION <span class="value-display" id="val-astral">0.0</span></label>
+                <input type="range" id="astral" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffbb88">VOID SINGULARITY <span class="value-display" id="val-singularity">0.0</span></label>
+                <input type="range" id="singularity" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffbb88">DIMENSIONAL TEAR <span class="value-display" id="val-tear">0.0</span></label>
+                <input type="range" id="tear" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffbb88">SOUL ECHO <span class="value-display" id="val-echo">0.0</span></label>
+                <input type="range" id="echo" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffbb88">PIXEL POSSESSION <span class="value-display" id="val-possession">0.0</span></label>
+                <input type="range" id="possession" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffbb88">FLESH CIRCUIT <span class="value-display" id="val-flesh">0.0</span></label>
+                <input type="range" id="flesh" min="0.0" max="1.0" step="0.01" value="0">
             </div>
 
             <!-- INTERACTIVE SENTIENCE -->
@@ -575,6 +613,17 @@
                 uniform float uFlipCam;
                 uniform vec2 uTexel;
 
+                // Forbidden Transmissions (V8)
+                uniform float uDream;
+                uniform float uRain;
+                uniform float uAstral;
+                uniform float uSingularity;
+                uniform float uTear;
+                uniform float uEcho;
+                uniform float uPossession;
+                uniform float uFlesh;
+                uniform float uAspect;
+
                 // Hyperdrive (V7)
                 uniform float uBloom;
                 uniform float uHorizon;
@@ -649,6 +698,14 @@
 
                 float rand(vec2 co){
                     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+                }
+
+                float vnoise(vec2 p){
+                    vec2 i = floor(p);
+                    vec2 f = fract(p);
+                    vec2 u = f * f * (3.0 - 2.0 * f);
+                    return mix(mix(rand(i), rand(i + vec2(1.0, 0.0)), u.x),
+                               mix(rand(i + vec2(0.0, 1.0)), rand(i + vec2(1.0, 1.0)), u.x), u.y);
                 }
 
                 // --- EFFECTS ---
@@ -749,7 +806,9 @@
                     // Time Ripple (Interactive) - Motion creates waves
                     if(uRipple > 0.0) {
                         float wave = sin(length(uv - 0.5) * 20.0 - uTime * 5.0);
-                        uv += (vec2(wave) * 0.01 * uRipple) * (motion * 10.0);
+                        // Residual: bright traces in the feedback buffer keep rippling after motion stops
+                        float amp = max(motion * 10.0, luma(oldColBase.rgb) * 0.6);
+                        uv += (vec2(wave) * 0.01 * uRipple) * amp;
                     }
 
                     // Crystal (Singularity) - Faceted refraction
@@ -907,7 +966,7 @@
                     if(uNerve > 0.0) {
                          float l = luma(finalRGB);
                          float edge = getEdge(uNewFrame, glitchUV);
-                         vec3 electric = vec3(0.1, 0.4, 1.0) * (1.0/l) * 0.1;
+                         vec3 electric = vec3(0.1, 0.4, 1.0) * (1.0 / max(l, 0.08)) * 0.1;
                          vec3 burn = vec3(1.0, 0.2, 0.0) * edge * 5.0;
                          finalRGB = mix(finalRGB, electric + burn, uNerve);
                     }
@@ -915,9 +974,11 @@
                     if(uDemonCore > 0.0) {
                          vec3 centerCol = texture2D(uNewFrame, vec2(0.5)).rgb;
                          float bright = luma(centerCol);
-                         if(bright > 0.6) {
-                             finalRGB = mix(finalRGB, vec3(0.2, 0.5, 1.0), uDemonCore * bright);
-                             glitchUV += vec2(sin(uTime*100.0), cos(uTime*80.0)) * 0.05 * uDemonCore;
+                         if(bright > 0.5) {
+                             vec2 shake = vec2(sin(uTime*100.0), cos(uTime*80.0)) * 0.04 * uDemonCore;
+                             vec3 shaken = texture2D(uNewFrame, glitchUV + shake).rgb;
+                             vec3 possessed = mix(shaken, vec3(0.2, 0.5, 1.0), uDemonCore * bright * 0.8);
+                             finalRGB = mix(finalRGB, possessed, uDemonCore);
                          }
                     }
 
@@ -942,10 +1003,10 @@
                         float angleRad = radians(uSpiritAngle);
                         spiritUV -= vec2(cos(angleRad), sin(angleRad)) * uSpiritWind;
                         spiritUV += center;
-                        if(spiritUV.x > 0.0 && spiritUV.x < 1.0 && spiritUV.y > 0.0 && spiritUV.y < 1.0) {
-                            vec4 history = texture2D(uOldFrame, spiritUV);
-                            finalRGB = mix(finalRGB, history.rgb, uSpirit);
-                        }
+                        vec2 spiritEdge = min(spiritUV, 1.0 - spiritUV);
+                        float spiritFade = smoothstep(0.0, 0.04, min(spiritEdge.x, spiritEdge.y));
+                        vec4 history = texture2D(uOldFrame, clamp(spiritUV, 0.0, 1.0));
+                        finalRGB = mix(finalRGB, history.rgb, uSpirit * spiritFade);
                     }
 
                     // Event Horizon (V7) - zoom feedback tunnel
@@ -957,7 +1018,8 @@
 
                     if(uNeuralPulse > 0.0) {
                          vec3 pulseColor = vec3(sin(uTime*2.0), sin(uTime*2.0+2.0), sin(uTime*2.0+4.0)) * 0.5 + 0.5;
-                         finalRGB = mix(finalRGB, pulseColor, uNeuralPulse * 0.3 * sin(uTime * 5.0));
+                         float pulseAmt = 0.5 + 0.5 * sin(uTime * 5.0);
+                         finalRGB = mix(finalRGB, pulseColor, uNeuralPulse * 0.4 * pulseAmt);
                     }
 
                     if(abs(uTemporalPhase) > 0.0) finalRGB = hueShift(finalRGB, uTemporalPhase * 0.5);
@@ -971,6 +1033,104 @@
                     if(uEdge > 0.0) {
                         float e = getEdge(uNewFrame, glitchUV);
                         finalRGB += vec3(0.0, 1.0, 0.8) * e * uEdge * 4.0;
+                    }
+
+                    // ============ FORBIDDEN TRANSMISSIONS (V8) ============
+
+                    // DREAM RECURSION - rotating, hue-drifting zoom feedback tunnel
+                    if(uDream > 0.0) {
+                        float da = 0.10 * sin(uTime * 0.5) * uDream;
+                        float ds = sin(da), dc = cos(da);
+                        vec2 dp = uv - 0.5;
+                        vec2 duv = vec2(dp.x * dc - dp.y * ds, dp.x * ds + dp.y * dc)
+                                   * (1.0 - 0.015 * uDream) + 0.5;
+                        vec3 prev = texture2D(uOldFrame, clamp(duv, 0.0, 1.0)).rgb;
+                        prev = hueShift(prev, 0.03) * 0.995;
+                        finalRGB = mix(finalRGB, max(finalRGB, prev), uDream * 0.9);
+                    }
+
+                    // GLITCH RAIN - datamosh drip columns smeared from the feedback buffer
+                    if(uRain > 0.0) {
+                        float col = floor(uv.x * 60.0);
+                        float speed = rand(vec2(col, 7.0));
+                        if(speed > 1.0 - uRain * 0.6) {
+                            float drip = fract(uTime * (0.1 + speed * 0.6));
+                            vec2 suv = vec2(uv.x, fract(uv.y - drip * 0.5));
+                            vec3 smear = texture2D(uOldFrame, suv).rgb;
+                            finalRGB = mix(finalRGB, smear, uRain * 0.85);
+                        }
+                    }
+
+                    // ASTRAL PROJECTION - radial RGB channel split, breathing with time
+                    if(uAstral > 0.0) {
+                        vec2 adir = uv - 0.5;
+                        float alen = max(length(adir), 1e-4);
+                        adir /= alen;
+                        float aamt = uAstral * 0.035 * (1.0 + 0.5 * sin(uTime * 3.0)) * (0.3 + alen);
+                        float ar = texture2D(uNewFrame, glitchUV + adir * aamt).r;
+                        float ab = texture2D(uNewFrame, glitchUV - adir * aamt).b;
+                        finalRGB = mix(finalRGB, vec3(ar, finalRGB.g, ab), min(uAstral * 2.0, 1.0));
+                    }
+
+                    // VOID SINGULARITY - event horizon swallows the core, accretion ring burns
+                    if(uSingularity > 0.0) {
+                        vec2 sp = uv - 0.5;
+                        sp.x *= uAspect;
+                        float sr = length(sp);
+                        float horizon2 = 0.05 + 0.15 * uSingularity;
+                        float swallow = smoothstep(horizon2 * 0.6, horizon2, sr);
+                        finalRGB *= mix(1.0, 0.05, swallow * uSingularity);
+                        float ring = exp(-abs(sr - horizon2 * 1.35) * 45.0);
+                        float flicker = 0.8 + 0.2 * sin(uTime * 20.0 + sr * 40.0);
+                        finalRGB += vec3(1.0, 0.55, 0.15) * ring * flicker * uSingularity * 1.5;
+                    }
+
+                    // DIMENSIONAL TEAR - a jagged rip: the far side shows the inverted, mirrored past
+                    if(uTear > 0.0) {
+                        float tearX = 0.5 + 0.3 * sin(uTime * 0.7);
+                        float jag = (vnoise(vec2(uv.y * 8.0, uTime * 2.0)) - 0.5) * 0.2 * uTear;
+                        float td = uv.x - (tearX + jag);
+                        if(td < 0.0) {
+                            vec2 tuv = vec2(clamp(2.0 * (tearX + jag) - uv.x, 0.0, 1.0), uv.y);
+                            vec3 other = vec3(1.0) - texture2D(uOldFrame, tuv).rgb;
+                            finalRGB = mix(finalRGB, other, uTear);
+                        }
+                        float seam = smoothstep(0.015, 0.0, abs(td));
+                        finalRGB += vec3(1.0, 0.3, 0.8) * seam * uTear;
+                    }
+
+                    // SOUL ECHO - spiral ghosts of the previous frame
+                    if(uEcho > 0.0) {
+                        vec2 ec = uv - 0.5;
+                        for(int ei = 1; ei <= 2; ei++) {
+                            float fi = float(ei);
+                            float ea = 0.15 * fi * uEcho;
+                            float es = sin(ea), eco = cos(ea);
+                            vec2 euv = vec2(ec.x * eco - ec.y * es, ec.x * es + ec.y * eco)
+                                       * (1.0 + 0.08 * fi) + 0.5;
+                            vec3 ghost = texture2D(uOldFrame, clamp(euv, 0.0, 1.0)).rgb;
+                            finalRGB += ghost * uEcho * 0.35 / fi;
+                        }
+                    }
+
+                    // PIXEL POSSESSION - seizure bands: inversion, channel rotation, strobe corruption
+                    if(uPossession > 0.0) {
+                        float band = floor(uv.y * 12.0);
+                        float seizure = rand(vec2(band, floor(uTime * 8.0)));
+                        if(seizure < uPossession * 0.4) {
+                            finalRGB = (vec3(1.0) - finalRGB).brg;
+                        }
+                        float fl = rand(vec2(band, floor(uTime * 13.0)));
+                        finalRGB *= 1.0 - uPossession * 0.5 * step(0.85, fl);
+                    }
+
+                    // FLESH CIRCUIT - organic vein growth fed by scene luminance
+                    if(uFlesh > 0.0) {
+                        float n1 = vnoise(uv * 6.0 + vec2(uTime * 0.3, -uTime * 0.2));
+                        float n2 = vnoise(uv * 14.0 - uTime * 0.15);
+                        float vein = smoothstep(0.44, 0.5, n1) * smoothstep(0.56, 0.5, n1);
+                        vec3 fleshCol = mix(vec3(0.25, 0.02, 0.05), vec3(1.0, 0.28, 0.2), vein + n2 * 0.25);
+                        finalRGB = mix(finalRGB, fleshCol * (luma(finalRGB) + 0.35), uFlesh);
                     }
 
                     // Chroma Bloom (V7) - cheap bright-pass glow
@@ -1027,6 +1187,16 @@
                     uTime: { value: 0 },
                     uFlipCam: { value: 1.0 },   // front camera starts mirrored
                     uTexel: { value: new THREE.Vector2(1.0 / db.x, 1.0 / db.y) },
+                    uAspect: { value: db.x / db.y },
+
+                    uDream: { value: 0.0 },
+                    uRain: { value: 0.0 },
+                    uAstral: { value: 0.0 },
+                    uSingularity: { value: 0.0 },
+                    uTear: { value: 0.0 },
+                    uEcho: { value: 0.0 },
+                    uPossession: { value: 0.0 },
+                    uFlesh: { value: 0.0 },
 
                     uBloom: { value: 0.0 },
                     uHorizon: { value: 0.0 },
@@ -1106,6 +1276,7 @@
                 rtOld.setSize(sz.x, sz.y);
                 rtNew.setSize(sz.x, sz.y);
                 material.uniforms.uTexel.value.set(1.0 / sz.x, 1.0 / sz.y);
+                material.uniforms.uAspect.value = sz.x / sz.y;
             }
 
             // --- 7. RENDER LOOP ---
@@ -1255,7 +1426,10 @@
             "ACID TRIP":        { liquid: 0.6, colorshift: 0.5, kaleidoscope: 8, deepFry: 0.6, bloom: 0.5 },
             "VHS DEAD CHANNEL": { vhs: 0.9, grain: 0.5, glitch: 0.3, scanlinePurge: 0.4, rgbShift: 0.03 },
             "EVENT HORIZON":    { horizon: 0.9, voidSpiral: 0.4, hyperbolicWarp: 0.3, bloom: 0.6 },
-            "STROBE SENTIENCE": { strobe: 0.5, edgeCrawl: 0.7, freeze: 0.3, ripple: 0.5 }
+            "STROBE SENTIENCE": { strobe: 0.5, edgeCrawl: 0.7, freeze: 0.3, ripple: 0.5 },
+            "ABYSSAL DREAM":    { dream: 0.9, singularity: 0.5, bloom: 0.4, echo: 0.4 },
+            "FULL POSSESSION":  { possession: 0.7, rain: 0.5, vhs: 0.4, tear: 0.6, grain: 0.3 },
+            "FLESH REACTOR":    { flesh: 0.8, bioHorror: 0.4, nerve: 0.5, magma: 0.4 }
         };
 
         function zeroAll() {
@@ -1284,14 +1458,14 @@
                 try {
                     const state = {};
                     document.querySelectorAll('input[type=range]').forEach(s => { state[s.id] = s.value; });
-                    localStorage.setItem('omniRealityV7', JSON.stringify(state));
+                    localStorage.setItem('omniRealityV8', JSON.stringify(state));
                 } catch (e) {}
             }, 400);
         }
 
         function restoreState() {
             try {
-                const raw = localStorage.getItem('omniRealityV7');
+                const raw = localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
                 if (!raw) return;
                 const state = JSON.parse(raw);
                 for (const [id, val] of Object.entries(state)) {
@@ -1353,7 +1527,7 @@
 
             document.getElementById('btn-reset').addEventListener('click', () => {
                 haptic(30);
-                try { localStorage.removeItem('omniRealityV7'); } catch (e) {}
+                try { localStorage.removeItem('omniRealityV8'); localStorage.removeItem('omniRealityV7'); } catch (e) {}
                 zeroAll();
                 document.getElementById('preset-select').value = "";
                 toast("ZERO STATE ACHIEVED");
