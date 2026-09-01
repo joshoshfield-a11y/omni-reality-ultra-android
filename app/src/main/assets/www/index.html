@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <title>Omni-Reality ULTRA [V7: HYPERDRIVE]</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            color: #00ffcc;
+            overscroll-behavior: none;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-transform: translate3d(0, 0, 0);
+            transform: translate3d(0, 0, 0);
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: #000;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        #ui-layer {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .top-bar {
+            pointer-events: auto;
+            display: flex;
+            gap: 8px;
+            padding: 10px;
+            padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
+            padding-left: calc(env(safe-area-inset-left, 0px) + 10px);
+            padding-right: calc(env(safe-area-inset-right, 0px) + 10px);
+            background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
+        }
+
+        .header-btn {
+            background: rgba(0, 20, 20, 0.9);
+            border: 1px solid #00ffcc;
+            color: #00ffcc;
+            padding: 12px;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 8px;
+            transition: all 0.2s;
+            min-width: 52px;
+            min-height: 44px;
+            text-shadow: 0 0 5px rgba(0,255,204,0.5);
+            box-shadow: 0 0 10px rgba(0,255,204,0.1);
+        }
+
+        .header-btn:active { transform: scale(0.94); background: rgba(0, 255, 204, 0.25); }
+        #btn-menu  { flex: 0 0 auto; width: 52px; }
+        #btn-swap  { flex: 0 0 auto; width: 52px; }
+        #btn-shot  { flex: 0 0 auto; width: 52px; }
+        #btn-record { flex: 1; }
+
+        #btn-record.recording {
+            background: #ff0000;
+            color: #fff;
+            border-color: #ff0000;
+            animation: pulse 1s infinite;
+            text-shadow: 0 0 5px rgba(255,0,0,0.8);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        #controls-dropdown {
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.96);
+            border: 1px solid #00ffcc;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 0 0 12px 12px;
+            margin: 0 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,1);
+            scrollbar-width: none;
+            touch-action: pan-y;
+        }
+
+        #controls-dropdown::-webkit-scrollbar { display: none; }
+
+        #controls-dropdown.open {
+            max-height: 75vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .section-header {
+            font-size: 10px;
+            color: #008866;
+            text-transform: uppercase;
+            padding: 12px 10px;
+            border-bottom: 1px solid #004433;
+            background: rgba(0, 20, 20, 0.9);
+            letter-spacing: 1px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .control-group {
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-bottom: 1px solid rgba(0, 255, 204, 0.1);
+        }
+
+        label {
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            color: #ccc;
+            text-transform: uppercase;
+        }
+
+        .value-display { color: #00ffcc; font-family: monospace; }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            background: transparent;
+            padding: 6px 0;
+            touch-action: pan-x;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 26px;
+            width: 26px;
+            background: #000;
+            border: 2px solid #00ffcc;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+            margin-top: -11px;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #112222;
+            border: 1px solid #004433;
+            border-radius: 2px;
+        }
+
+        select {
+            width: 100%;
+            background: #001111;
+            color: #00ffcc;
+            border: 1px solid #004433;
+            padding: 10px 8px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        #fps-counter {
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 0px) + 64px);
+            right: 10px;
+            font-size: 10px;
+            color: #00ffcc;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.55);
+            padding: 5px 7px;
+            border-radius: 4px;
+            pointer-events: none;
+            text-align: right;
+            line-height: 1.5;
+        }
+
+        #status {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ffcc;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid #00ffcc;
+            padding: 20px;
+            text-align: center;
+            z-index: 50;
+            display: none;
+            max-width: 80%;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+            font-size: 13px;
+        }
+
+        #emergency-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: #110000;
+            color: #ff5555;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 9999;
+            padding: 20px;
+            overflow: auto;
+            display: none;
+            pointer-events: all;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="top-bar">
+            <button id="btn-menu" class="header-btn">&#9776;</button>
+            <button id="btn-record" class="header-btn">&#9679; REC</button>
+            <button id="btn-shot" class="header-btn">&#128248;</button>
+            <button id="btn-swap" class="header-btn">&#8646;</button>
+        </div>
+
+        <div id="controls-dropdown">
+
+            <!-- PRESETS (NEW V7) -->
+            <div class="section-header" style="color: #ffffff; border-bottom-color: #666666; background: rgba(25,25,25,0.95);">// PRESET MATRIX</div>
+            <div class="control-group">
+                <label style="color:#eeeeee">LOAD PRESET</label>
+                <select id="preset-select">
+                    <option value="">-- SELECT PROTOCOL --</option>
+                    <option value="GHOST PROTOCOL">GHOST PROTOCOL</option>
+                    <option value="HELLRAISER">HELLRAISER</option>
+                    <option value="MATRIX UPLINK">MATRIX UPLINK</option>
+                    <option value="ACID TRIP">ACID TRIP</option>
+                    <option value="VHS DEAD CHANNEL">VHS DEAD CHANNEL</option>
+                    <option value="EVENT HORIZON">EVENT HORIZON</option>
+                    <option value="STROBE SENTIENCE">STROBE SENTIENCE</option>
+                </select>
+            </div>
+
+            <!-- HYPERDRIVE (NEW V7) -->
+            <div class="section-header" style="color: #ffaa00; border-bottom-color: #aa6600; background: rgba(30,20,0,0.9);">// HYPERDRIVE [V7]</div>
+            <div class="control-group">
+                <label style="color:#ffdd99">CHROMA BLOOM <span class="value-display" id="val-bloom">0.0</span></label>
+                <input type="range" id="bloom" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffdd99">EVENT HORIZON <span class="value-display" id="val-horizon">0.0</span></label>
+                <input type="range" id="horizon" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffdd99">FILM GRAIN <span class="value-display" id="val-grain">0.0</span></label>
+                <input type="range" id="grain" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffdd99">PHOTON STROBE <span class="value-display" id="val-strobe">0.0</span></label>
+                <input type="range" id="strobe" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+            <!-- INTERACTIVE SENTIENCE -->
+            <div class="section-header" style="color: #ffff00; border-bottom-color: #aaaa00; background: rgba(30,30,0,0.9);">// INTERACTIVE SENTIENCE</div>
+            <div class="control-group">
+                <label style="color:#ffffcc">MOTION MAGMA <span class="value-display" id="val-magma">0.0</span></label>
+                <input type="range" id="magma" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffffcc">TIME RIPPLE <span class="value-display" id="val-ripple">0.0</span></label>
+                <input type="range" id="ripple" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffffcc">VOID GRAVITY <span class="value-display" id="val-voidGravity">0.0</span></label>
+                <input type="range" id="voidGravity" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffffcc">EDGE CRAWL <span class="value-display" id="val-edgeCrawl">0.0</span></label>
+                <input type="range" id="edgeCrawl" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffffcc">FREEZE FRAME <span class="value-display" id="val-freeze">0.0</span></label>
+                <input type="range" id="freeze" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+            <!-- DIGITAL SINGULARITY -->
+            <div class="section-header" style="color: #00ffff; border-bottom-color: #00aaaa; background: rgba(0,20,30,0.9);">// DIGITAL SINGULARITY</div>
+            <div class="control-group">
+                <label style="color:#ccffff">DOS TERMINAL <span class="value-display" id="val-ascii">0.0</span></label>
+                <input type="range" id="ascii" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ccffff">CELLULAR HIVE <span class="value-display" id="val-hex">0.0</span></label>
+                <input type="range" id="hex" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ccffff">TIME CRYSTAL <span class="value-display" id="val-crystal">0.0</span></label>
+                <input type="range" id="crystal" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ccffff">VHS NIGHTMARE <span class="value-display" id="val-vhs">0.0</span></label>
+                <input type="range" id="vhs" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+             <div class="control-group">
+                <label style="color:#ccffff">NERVE ENDING <span class="value-display" id="val-nerve">0.0</span></label>
+                <input type="range" id="nerve" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+            <!-- FORBIDDEN ARCHIVE -->
+            <div class="section-header" style="color: #ff3333; border-bottom-color: #aa0000; background: rgba(30,0,0,0.9);">// FORBIDDEN ARCHIVE</div>
+            <div class="control-group">
+                <label style="color:#ff9999">BIO-HORROR <span class="value-display" id="val-bioHorror">0.0</span></label>
+                <input type="range" id="bioHorror" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff9999">HELL PORTAL <span class="value-display" id="val-hellPortal">0.0</span></label>
+                <input type="range" id="hellPortal" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff9999">DATA ROT <span class="value-display" id="val-dataRot">0.0</span></label>
+                <input type="range" id="dataRot" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff9999">DEMON CORE <span class="value-display" id="val-demonCore">0.0</span></label>
+                <input type="range" id="demonCore" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff9999">SCANLINE PURGE <span class="value-display" id="val-scanlinePurge">0.0</span></label>
+                <input type="range" id="scanlinePurge" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+            <!-- SPIRIT REALM -->
+            <div class="section-header">// SPIRIT REALM</div>
+            <div class="control-group">
+                <label>GHOST OPACITY <span class="value-display" id="val-spirit">0.0</span></label>
+                <input type="range" id="spirit" min="0.0" max="0.99" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>AURA EXPANSION <span class="value-display" id="val-spiritexpand">1.01</span></label>
+                <input type="range" id="spiritexpand" min="0.90" max="1.10" step="0.001" value="1.01">
+            </div>
+            <div class="control-group">
+                <label>VORTEX SPIN <span class="value-display" id="val-spiritrotate">0.0</span></label>
+                <input type="range" id="spiritrotate" min="-0.1" max="0.1" step="0.001" value="0.0">
+            </div>
+            <div class="control-group">
+                <label>WIND SPEED <span class="value-display" id="val-spiritwind">0.0</span></label>
+                <input type="range" id="spiritwind" min="0.0" max="0.05" step="0.001" value="0.0">
+            </div>
+
+            <!-- PSYCHOSIS LAYER -->
+            <div class="section-header" style="color: #ff00ff; border-bottom-color: #aa00aa;">// PSYCHOSIS LAYER</div>
+            <div class="control-group">
+                <label style="color:#ffccff">LIQUID MELTDOWN <span class="value-display" id="val-liquid">0.0</span></label>
+                <input type="range" id="liquid" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffccff">VOID SPIRAL <span class="value-display" id="val-voidSpiral">0.0</span></label>
+                <input type="range" id="voidSpiral" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffccff">DEEP FRIED <span class="value-display" id="val-deepFry">0.0</span></label>
+                <input type="range" id="deepFry" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+             <div class="control-group">
+                <label style="color:#ffccff">PIXEL DRAG <span class="value-display" id="val-pixelDrag">0.0</span></label>
+                <input type="range" id="pixelDrag" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+            <!-- COSMIC GEOMETRY -->
+            <div class="section-header">// COSMIC GEOMETRY</div>
+            <div class="control-group">
+                <label>MANDALA SEGS <span class="value-display" id="val-kaleidoscope">0.0</span></label>
+                <input type="range" id="kaleidoscope" min="0.0" max="16.0" step="0.1" value="0">
+            </div>
+            <div class="control-group">
+                <label>FRACTAL RECURSION <span class="value-display" id="val-fractalStrength">0.0</span></label>
+                <input type="range" id="fractalStrength" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>HYPERBOLIC RIFT <span class="value-display" id="val-hyperbolicWarp">0.0</span></label>
+                <input type="range" id="hyperbolicWarp" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>QUANTUM WAVE <span class="value-display" id="val-quantumEntanglement">0.0</span></label>
+                <input type="range" id="quantumEntanglement" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+            <!-- GLITCH & VISION -->
+            <div class="section-header">// GLITCH & VISION</div>
+            <div class="control-group">
+                <label>CYBER EDGE <span class="value-display" id="val-edge">0.0</span></label>
+                <input type="range" id="edge" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>CHRONO BREAKER <span class="value-display" id="val-chronoBreaker">0.0</span></label>
+                <input type="range" id="chronoBreaker" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>RGB SPLIT <span class="value-display" id="val-rgbShift">0.0</span></label>
+                <input type="range" id="rgbShift" min="0.0" max="0.1" step="0.001" value="0">
+            </div>
+            <div class="control-group">
+                <label>MOSAIC <span class="value-display" id="val-mosaic">0.0</span></label>
+                <input type="range" id="mosaic" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>DATAMOSH <span class="value-display" id="val-glitch">0.0</span></label>
+                <input type="range" id="glitch" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+            <!-- SYSTEM -->
+            <div class="section-header">// SYSTEM</div>
+            <div class="control-group">
+                <label>NEURAL PULSE <span class="value-display" id="val-neuralPulse">0.0</span></label>
+                <input type="range" id="neuralPulse" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>TIME PHASE <span class="value-display" id="val-temporalPhase">0.0</span></label>
+                <input type="range" id="temporalPhase" min="-1.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>REALITY COLLAPSE <span class="value-display" id="val-realityCollapse">0.0</span></label>
+                <input type="range" id="realityCollapse" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>THERMAL <span class="value-display" id="val-thermal">0.0</span></label>
+                <input type="range" id="thermal" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+             <div class="control-group">
+                <label>MIRROR <span class="value-display" id="val-mirror">0.0</span></label>
+                <input type="range" id="mirror" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label>HUE SHIFT <span class="value-display" id="val-colorshift">0.0</span></label>
+                <input type="range" id="colorshift" min="0" max="1" step="0.01" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>RECORDING FORMAT</label>
+                <select id="video-format">
+                    <option value="mp4">MP4 (Best Compatibility)</option>
+                    <option value="webm">WEBM (Android/Chrome)</option>
+                </select>
+            </div>
+
+            <button id="btn-reset" class="header-btn" style="margin: 10px; color: #ff00cc; border-color: #ff00cc;">INITIATE ZERO STATE</button>
+        </div>
+    </div>
+
+    <div id="fps-counter">-- FPS</div>
+    <div id="status">INITIALIZING SYSTEMS...</div>
+    <div id="emergency-overlay">
+        <h1>SYSTEM FAILURE</h1>
+        <div id="emergency-log"></div>
+        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px; background: #fff; color: #000; border: none; cursor: pointer;">REBOOT SYSTEM</button>
+    </div>
+
+    <script src="./three.min.js"></script>
+
+    <!-- MAIN LOGIC -->
+    <script>
+        // --- 1. CONFIGURATION & STATE ---
+        let renderer, scene, camera, material, rtOld, rtNew, video, videoTexture;
+        let streamObject = null;
+        let clock = 0;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let currentFacingMode = 'user';
+        let isWebGLReady = false;
+        let quality = 1.0;              // adaptive resolution scale (V7)
+        let fpsEma = 60;
+        let lastQualityAdjust = 0;
+
+        const hasBridge = !!(window.Omni && window.Omni.saveVideo);
+
+        const rescueTimer = setTimeout(() => {
+            if(!isWebGLReady) {
+                console.error('WebGL initialization timeout');
+                document.getElementById('emergency-overlay').style.display = 'block';
+                document.getElementById('emergency-log').innerHTML = 'WebGL failed to start.<br>1. Check Camera Permissions.<br>2. Device may not support high-perf WebGL.';
+            }
+        }, 8000);
+
+        function haptic(ms) { try { navigator.vibrate && navigator.vibrate(ms || 12); } catch(e){} }
+
+        let toastTimer = null;
+        function toast(msg, sticky) {
+            const s = document.getElementById('status');
+            s.innerText = msg;
+            s.style.display = 'block';
+            clearTimeout(toastTimer);
+            if (!sticky) toastTimer = setTimeout(() => { s.style.display = 'none'; }, 1600);
+        }
+        function hideToast() {
+            clearTimeout(toastTimer);
+            document.getElementById('status').style.display = 'none';
+        }
+
+        // --- 2. INITIALIZATION ---
+        async function init() {
+          try {
+            const THREE = window.THREE;
+
+            const canvasTest = document.createElement('canvas');
+            if(!canvasTest.getContext('webgl2')) throw new Error("WebGL2 not supported on this device.");
+
+            renderer = new THREE.WebGLRenderer({
+                antialias: false,
+                preserveDrawingBuffer: true,
+                powerPreference: 'high-performance'
+            });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.domElement.addEventListener('webglcontextlost', (e) => {
+                e.preventDefault();
+                location.reload();
+            }, false);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+            const rtParams = {
+                minFilter: THREE.LinearFilter,
+                magFilter: THREE.LinearFilter,
+                format: THREE.RGBAFormat,
+                type: THREE.HalfFloatType,
+                depthBuffer: false,
+                stencilBuffer: false
+            };
+            const db = renderer.getDrawingBufferSize(new THREE.Vector2());
+            rtOld = new THREE.WebGLRenderTarget(db.x, db.y, rtParams);
+            rtNew = new THREE.WebGLRenderTarget(db.x, db.y, rtParams);
+
+            // --- 3. SHADER DEFINITION ---
+            const vertexShader = `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = vec4(position, 1.0);
+                }
+            `;
+
+            const fragmentShader = `
+                uniform sampler2D uNewFrame;
+                uniform sampler2D uOldFrame;
+                uniform float uTime;
+                uniform float uFlipCam;
+                uniform vec2 uTexel;
+
+                // Hyperdrive (V7)
+                uniform float uBloom;
+                uniform float uHorizon;
+                uniform float uGrain;
+                uniform float uStrobe;
+
+                // Interactive Sentience
+                uniform float uMagma;
+                uniform float uRipple;
+                uniform float uVoidGravity;
+                uniform float uEdgeCrawl;
+                uniform float uFreeze;
+
+                // Singularity
+                uniform float uAscii;
+                uniform float uHex;
+                uniform float uCrystal;
+                uniform float uVhs;
+                uniform float uNerve;
+
+                // Forbidden Knowledge
+                uniform float uBioHorror;
+                uniform float uHellPortal;
+                uniform float uDataRot;
+                uniform float uDemonCore;
+                uniform float uScanlinePurge;
+
+                // Spirit Realm
+                uniform float uSpirit;
+                uniform float uSpiritExpand;
+                uniform float uSpiritRotate;
+                uniform float uSpiritAngle;
+                uniform float uSpiritWind;
+
+                // Psychosis Layer
+                uniform float uLiquid;
+                uniform float uVoidSpiral;
+                uniform float uDeepFry;
+                uniform float uPixelDrag;
+
+                // Glitch & Vision
+                uniform float uGlitch;
+                uniform float uEdge;
+                uniform float uThermal;
+                uniform float uMirror;
+                uniform float uColorShift;
+                uniform float uChronoBreaker;
+                uniform float uRGBShift;
+                uniform float uMosaic;
+                uniform float uNeuralPulse;
+
+                // Dimension Warp
+                uniform float uKaleidoscope;
+                uniform float uFractalStrength;
+                uniform float uTemporalPhase;
+                uniform float uHyperbolicWarp;
+                uniform float uQuantumEntanglement;
+                uniform float uRealityCollapse;
+
+                varying vec2 vUv;
+
+                // --- UTILS ---
+                vec3 hueShift(vec3 color, float shift) {
+                    const vec3 k = vec3(0.57735);
+                    float cosAngle = cos(shift * 6.28);
+                    return vec3(color * cosAngle + cross(k, color) * sin(shift * 6.28) + k * dot(k, color) * (1.0 - cosAngle));
+                }
+
+                float luma(vec3 color) {
+                    return dot(color, vec3(0.299, 0.587, 0.114));
+                }
+
+                float rand(vec2 co){
+                    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+                }
+
+                // --- EFFECTS ---
+
+                vec2 kaleido(vec2 uv, float segments) {
+                    if(segments < 0.1) return uv;
+                    vec2 centered = uv - 0.5;
+                    float r = length(centered);
+                    float a = atan(centered.y, centered.x);
+                    float segAngle = 3.14159 * 2.0 / segments;
+                    a = mod(a, segAngle);
+                    a = abs(a - segAngle/2.0);
+                    return vec2(cos(a), sin(a)) * r + 0.5;
+                }
+
+                vec2 fractalRecursion(vec2 uv, float time, float strength) {
+                    vec2 result = uv;
+                    for(int i = 0; i < 3; i++) {
+                        float scale = pow(2.0, float(i)) * (1.0 + strength);
+                        vec2 offset = vec2(sin(time * 0.2 + float(i)) * 0.1 * strength, cos(time * 0.15 + float(i)) * 0.1 * strength);
+                        result = fract(result * scale + offset);
+                    }
+                    return result;
+                }
+
+                vec2 hyperbolicTransform(vec2 uv, float warp) {
+                    vec2 center = vec2(0.5);
+                    vec2 delta = uv - center;
+                    float r = length(delta);
+                    float theta = atan(delta.y, delta.x);
+                    float hyperR = asinh(r * warp * 8.0);
+                    float newR = tanh(hyperR) / (warp * 8.0);
+                    return center + vec2(cos(theta), sin(theta)) * newR;
+                }
+
+                vec2 voidSpiral(vec2 uv, float strength) {
+                    vec2 center = vec2(0.5);
+                    vec2 delta = uv - center;
+                    float dist = length(delta);
+                    float angle = atan(delta.y, delta.x);
+                    float warp = strength * 10.0 / (dist + 0.1);
+                    angle += warp;
+                    return center + vec2(cos(angle), sin(angle)) * dist;
+                }
+
+                float getEdge(sampler2D tex, vec2 uv) {
+                    vec2 step = uTexel * 2.0;
+                    float l = luma(texture2D(tex, uv + vec2(-step.x, 0.0)).rgb);
+                    float r = luma(texture2D(tex, uv + vec2(step.x, 0.0)).rgb);
+                    float t = luma(texture2D(tex, uv + vec2(0.0, -step.y)).rgb);
+                    float b = luma(texture2D(tex, uv + vec2(0.0, step.y)).rgb);
+                    return sqrt(pow(l-r, 2.0) + pow(t-b, 2.0));
+                }
+
+                vec2 hellPortal(vec2 uv, float strength) {
+                    vec2 p = uv - 0.5;
+                    float r = length(p);
+                    float a = atan(p.y, p.x);
+                    float r2 = 1.0 / (r + 0.01) * (strength * 0.1);
+                    a += strength * 5.0;
+                    vec2 inverted = vec2(cos(a), sin(a)) * r2;
+                    return mix(p, inverted, strength * 0.5) + 0.5;
+                }
+
+                vec2 bioWarp(vec2 uv, float strength, float time) {
+                    vec2 p = uv * 5.0;
+                    float noiseVal = sin(p.x + time) * cos(p.y + time);
+                    noiseVal += sin(p.y * 2.0 - time) * 0.5;
+                    uv += vec2(noiseVal) * 0.1 * strength;
+                    return uv;
+                }
+
+                void main() {
+                    vec2 uv = vUv;
+                    if(uFlipCam > 0.5) uv.x = 1.0 - uv.x;
+
+                    // --- PRE-CALCULATION: MOTION & ANALYSIS ---
+                    vec4 newColBase = texture2D(uNewFrame, uv);
+                    vec4 oldColBase = texture2D(uOldFrame, uv);
+                    vec3 diff = abs(newColBase.rgb - oldColBase.rgb);
+                    float motion = max(max(diff.r, diff.g), diff.b);
+                    float brightness = luma(newColBase.rgb);
+
+                    // --- STEP 1: COORDINATE MANIPULATION ---
+
+                    // Void Gravity (Interactive) - Bright spots suck pixels in
+                    if(uVoidGravity > 0.0) {
+                        float force = (1.0 - brightness) * uVoidGravity * 0.1;
+                        float step = 0.01;
+                        float bL = luma(texture2D(uNewFrame, uv + vec2(-step, 0.0)).rgb);
+                        float bR = luma(texture2D(uNewFrame, uv + vec2(step, 0.0)).rgb);
+                        float bT = luma(texture2D(uNewFrame, uv + vec2(0.0, -step)).rgb);
+                        float bB = luma(texture2D(uNewFrame, uv + vec2(0.0, step)).rgb);
+                        vec2 flow = vec2(bR - bL, bB - bT);
+                        uv += flow * force * 2.0;
+                    }
+
+                    // Time Ripple (Interactive) - Motion creates waves
+                    if(uRipple > 0.0) {
+                        float wave = sin(length(uv - 0.5) * 20.0 - uTime * 5.0);
+                        uv += (vec2(wave) * 0.01 * uRipple) * (motion * 10.0);
+                    }
+
+                    // Crystal (Singularity) - Faceted refraction
+                    if(uCrystal > 0.0) {
+                        float cells = 10.0 - uCrystal * 5.0;
+                        vec2 cell = floor(uv * cells);
+                        float r = rand(cell);
+                        uv += (vec2(r, rand(cell + 1.0)) - 0.5) * 0.1 * uCrystal;
+                    }
+
+                    // Hex Hive (Singularity)
+                    if(uHex > 0.0) {
+                        vec2 r = vec2(1.0, 1.73);
+                        vec2 h = r * 0.5;
+                        vec2 a = mod(uv * 20.0, r) - h;
+                        vec2 b = mod(uv * 20.0 - h, r) - h;
+                        vec2 gv = dot(a, a) < dot(b, b) ? a : b;
+                        float dist = length(gv);
+                        uv -= gv * (dist * 0.5 * uHex) * 0.1;
+                    }
+
+                    if(uScanlinePurge > 0.0) {
+                        float shift = pow(uv.y, 2.0) * uScanlinePurge * 0.2;
+                        if(fract(uTime * 10.0) > 0.5) shift *= -1.0;
+                        uv.x += sin(uv.y * 100.0 + uTime * 20.0) * 0.01 * uScanlinePurge;
+                        uv.y += shift;
+                    }
+
+                    if(uHellPortal > 0.0) uv = hellPortal(uv, uHellPortal);
+                    if(uBioHorror > 0.0) uv = bioWarp(uv, uBioHorror, uTime);
+                    if(uVoidSpiral > 0.0) uv = voidSpiral(uv, uVoidSpiral * 0.5);
+
+                    if(uLiquid > 0.0) {
+                        float time = uTime * 2.0;
+                        uv.x += sin(uv.y * 10.0 + time) * 0.05 * uLiquid;
+                        uv.y += cos(uv.x * 8.0 + time) * 0.05 * uLiquid;
+                        uv.x += sin(uv.y * 20.0 - time) * 0.02 * uLiquid;
+                    }
+
+                    if(uKaleidoscope > 0.0) uv = kaleido(uv, uKaleidoscope + 2.0);
+                    if(uFractalStrength > 0.0) uv = fractalRecursion(uv, uTime, uFractalStrength);
+                    if(uHyperbolicWarp > 0.0) uv = hyperbolicTransform(uv, uHyperbolicWarp);
+
+                    if(uQuantumEntanglement > 0.0) {
+                        uv.x += sin(uv.y * 20.0 + uTime * 2.0) * 0.05 * uQuantumEntanglement;
+                        uv.y += cos(uv.x * 15.0 - uTime * 2.0) * 0.05 * uQuantumEntanglement;
+                    }
+
+                    if(uMirror > 0.0) {
+                        vec2 muv = uv - 0.5;
+                        muv.x = abs(muv.x);
+                        if(uMirror > 0.5) muv.y = abs(muv.y);
+                        uv = muv + 0.5;
+                    }
+
+                    // --- STEP 2: GLITCH & PIXEL MANIPULATION ---
+
+                    vec2 glitchUV = uv;
+
+                    if(uChronoBreaker > 0.0) {
+                        float slices = 20.0;
+                        float slice = floor(glitchUV.y * slices);
+                        float shift = sin(uTime * 5.0 + slice) * 0.1 * uChronoBreaker;
+                        if(fract(sin(uTime + slice)*132.3) > 0.9) shift += 0.2 * uChronoBreaker;
+                        glitchUV.x += shift;
+                    }
+
+                    if(uPixelDrag > 0.0) {
+                        float noiseVal = rand(uv + vec2(0.0, uTime));
+                        if (noiseVal < uPixelDrag) {
+                            glitchUV.x -= noiseVal * 0.2 * uPixelDrag;
+                        }
+                    }
+
+                    if(uGlitch > 0.0) {
+                        float noiseVal = rand(uv + vec2(uTime, 0.0));
+                        if(noiseVal < uGlitch * 0.1) glitchUV.x += (noiseVal - 0.5) * 0.2;
+                        vec4 old = texture2D(uOldFrame, uv);
+                        glitchUV += (luma(old.rgb) - 0.5) * 0.05 * uGlitch;
+                    }
+
+                    if(uMosaic > 0.0) {
+                        float pixels = 200.0 * (1.0 - uMosaic) + 5.0;
+                        glitchUV = floor(glitchUV * pixels) / pixels;
+                    }
+
+                    // --- STEP 3: COLOR SAMPLING & PROCESSING ---
+
+                    vec3 finalRGB;
+
+                    // Freeze Frame (Interactive)
+                    if(uFreeze > 0.0) {
+                        if(motion < uFreeze * 0.2) {
+                            vec3 frozen = texture2D(uOldFrame, glitchUV).rgb;
+                            frozen = mix(frozen, vec3(0.0, 0.0, 1.0), 0.01);
+                            finalRGB = frozen;
+                        } else {
+                             finalRGB = texture2D(uNewFrame, glitchUV).rgb;
+                             finalRGB += vec3(1.0) * motion;
+                        }
+                    }
+                    // VHS Nightmare
+                    else if(uVhs > 0.0) {
+                        vec2 vhsUV = glitchUV;
+                        if(rand(vec2(uTime, uv.y)) > 0.9) vhsUV.x += 0.02 * uVhs;
+                        float r = texture2D(uNewFrame, vhsUV + vec2(0.005 * uVhs, 0.0)).r;
+                        float g = texture2D(uNewFrame, vhsUV).g;
+                        float b = texture2D(uNewFrame, vhsUV - vec2(0.005 * uVhs, 0.0)).b;
+                        finalRGB = vec3(r, g, b);
+                        if(mod(uv.y * 100.0, 2.0) < 1.0) finalRGB *= (1.0 - 0.2 * uVhs);
+                    } else if(uRGBShift > 0.0) {
+                        float r = texture2D(uNewFrame, glitchUV + vec2(uRGBShift * 0.05, 0.0)).r;
+                        float g = texture2D(uNewFrame, glitchUV).g;
+                        float b = texture2D(uNewFrame, glitchUV - vec2(uRGBShift * 0.05, 0.0)).b;
+                        finalRGB = vec3(r, g, b);
+                    } else {
+                        finalRGB = texture2D(uNewFrame, glitchUV).rgb;
+                    }
+
+                    // --- POST-PROCESS EFFECTS ---
+
+                    // Motion Magma (Interactive)
+                    if(uMagma > 0.0) {
+                        vec3 cold = vec3(0.0, 0.1, 0.3);
+                        vec3 hot = vec3(1.0, 0.3, 0.0);
+                        vec3 magma = mix(cold, hot, motion * 5.0);
+                        finalRGB = mix(finalRGB, magma, uMagma);
+                    }
+
+                    // Edge Crawl (Interactive)
+                    if(uEdgeCrawl > 0.0) {
+                         float e = getEdge(uNewFrame, glitchUV);
+                         if(e > 0.1) {
+                             float march = sin( (uv.x + uv.y) * 50.0 + uTime * 10.0 );
+                             vec3 crawlCol = march > 0.0 ? vec3(1.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+                             finalRGB = mix(finalRGB, crawlCol, uEdgeCrawl * e * 2.0);
+                         }
+                    }
+
+                    // ASCII Terminal
+                    if(uAscii > 0.0) {
+                        float resolution = 80.0;
+                        vec2 grid = floor(uv * resolution) / resolution;
+                        float gray = luma(texture2D(uNewFrame, grid).rgb);
+                        vec2 local = fract(uv * resolution);
+                        float dist = length(local - 0.5);
+                        float radius = gray * 0.5;
+                        float mask = step(dist, radius);
+                        vec3 termColor = vec3(0.0, 1.0, 0.2);
+                        if(uAscii > 0.5) termColor = mix(termColor, vec3(1.0), 0.5);
+                        finalRGB = mix(finalRGB, termColor * mask, uAscii);
+                    }
+
+                    // Nerve Ending (Bio-Luminescent)
+                    if(uNerve > 0.0) {
+                         float l = luma(finalRGB);
+                         float edge = getEdge(uNewFrame, glitchUV);
+                         vec3 electric = vec3(0.1, 0.4, 1.0) * (1.0/l) * 0.1;
+                         vec3 burn = vec3(1.0, 0.2, 0.0) * edge * 5.0;
+                         finalRGB = mix(finalRGB, electric + burn, uNerve);
+                    }
+
+                    if(uDemonCore > 0.0) {
+                         vec3 centerCol = texture2D(uNewFrame, vec2(0.5)).rgb;
+                         float bright = luma(centerCol);
+                         if(bright > 0.6) {
+                             finalRGB = mix(finalRGB, vec3(0.2, 0.5, 1.0), uDemonCore * bright);
+                             glitchUV += vec2(sin(uTime*100.0), cos(uTime*80.0)) * 0.05 * uDemonCore;
+                         }
+                    }
+
+                    if(uDataRot > 0.0) {
+                        float steps = 8.0 - (uDataRot * 7.0);
+                        finalRGB = floor(finalRGB * steps) / steps;
+                        if(rand(vec2(uv.y * 100.0, uTime)) < uDataRot * 0.2) {
+                            finalRGB = 1.0 - finalRGB;
+                        }
+                    }
+
+                    // Feedback Loop (Spirit)
+                    if(uSpirit > 0.0) {
+                        vec2 center = vec2(0.5);
+                        vec2 spiritUV = uv - center;
+                        if(abs(uSpiritRotate) > 0.0) {
+                            float s = sin(uSpiritRotate);
+                            float c = cos(uSpiritRotate);
+                            spiritUV = vec2(spiritUV.x * c - spiritUV.y * s, spiritUV.x * s + spiritUV.y * c);
+                        }
+                        spiritUV /= uSpiritExpand;
+                        float angleRad = radians(uSpiritAngle);
+                        spiritUV -= vec2(cos(angleRad), sin(angleRad)) * uSpiritWind;
+                        spiritUV += center;
+                        if(spiritUV.x > 0.0 && spiritUV.x < 1.0 && spiritUV.y > 0.0 && spiritUV.y < 1.0) {
+                            vec4 history = texture2D(uOldFrame, spiritUV);
+                            finalRGB = mix(finalRGB, history.rgb, uSpirit);
+                        }
+                    }
+
+                    // Event Horizon (V7) - zoom feedback tunnel
+                    if(uHorizon > 0.0) {
+                        vec2 zuv = (uv - 0.5) * (1.0 - 0.025 * uHorizon) + 0.5;
+                        vec3 zoomed = texture2D(uOldFrame, zuv).rgb * 0.996;
+                        finalRGB = mix(finalRGB, max(finalRGB, zoomed), uHorizon);
+                    }
+
+                    if(uNeuralPulse > 0.0) {
+                         vec3 pulseColor = vec3(sin(uTime*2.0), sin(uTime*2.0+2.0), sin(uTime*2.0+4.0)) * 0.5 + 0.5;
+                         finalRGB = mix(finalRGB, pulseColor, uNeuralPulse * 0.3 * sin(uTime * 5.0));
+                    }
+
+                    if(abs(uTemporalPhase) > 0.0) finalRGB = hueShift(finalRGB, uTemporalPhase * 0.5);
+
+                    if(uThermal > 0.0) {
+                        float val = luma(finalRGB);
+                        vec3 thermal = vec3(sin(val*7.8), sin(val*7.8+2.0), sin(val*7.8+4.0)) * 0.5 + 0.5;
+                        finalRGB = mix(finalRGB, thermal, uThermal);
+                    }
+
+                    if(uEdge > 0.0) {
+                        float e = getEdge(uNewFrame, glitchUV);
+                        finalRGB += vec3(0.0, 1.0, 0.8) * e * uEdge * 4.0;
+                    }
+
+                    // Chroma Bloom (V7) - cheap bright-pass glow
+                    if(uBloom > 0.0) {
+                        float rad = 0.006 + uBloom * 0.010;
+                        vec3 glow = texture2D(uNewFrame, glitchUV + vec2(rad, 0.0)).rgb
+                                  + texture2D(uNewFrame, glitchUV - vec2(rad, 0.0)).rgb
+                                  + texture2D(uNewFrame, glitchUV + vec2(0.0, rad)).rgb
+                                  + texture2D(uNewFrame, glitchUV - vec2(0.0, rad)).rgb;
+                        glow *= 0.25;
+                        float gl = max(luma(glow) - 0.55, 0.0);
+                        finalRGB += glow * gl * uBloom * 2.5;
+                    }
+
+                    if(uDeepFry > 0.0) {
+                        float l = luma(finalRGB);
+                        finalRGB = mix(vec3(l), finalRGB, 1.0 + uDeepFry * 4.0);
+                        finalRGB = (finalRGB - 0.5) * (1.0 + uDeepFry * 2.0) + 0.5;
+                        if(uDeepFry > 0.5) finalRGB = floor(finalRGB * 4.0) / 4.0;
+                    }
+
+                    if(uRealityCollapse > 0.0) {
+                        float block = 100.0 * (1.0 - uRealityCollapse);
+                        if(block < 1.0) block = 1.0;
+                        vec2 blockUV = floor(uv * block) / block;
+                        float noise = rand(blockUV);
+                        if(noise < uRealityCollapse * 0.3) finalRGB = vec3(0.0);
+                    }
+
+                    // Photon Strobe (V7)
+                    if(uStrobe > 0.0) {
+                        float s = step(0.5, fract(uTime * (1.0 + uStrobe * 9.0)));
+                        finalRGB *= mix(1.0, s, uStrobe);
+                    }
+
+                    if(uColorShift > 0.0) finalRGB = hueShift(finalRGB, uColorShift);
+
+                    // Film Grain (V7) - applied last so it sits on top
+                    if(uGrain > 0.0) {
+                        float g = rand(uv * vec2(1234.0, 876.0) + fract(uTime) * 100.0) - 0.5;
+                        finalRGB += g * uGrain * 0.35;
+                    }
+
+                    gl_FragColor = vec4(finalRGB, 1.0);
+                }
+            `;
+
+            material = new THREE.ShaderMaterial({
+                vertexShader,
+                fragmentShader,
+                uniforms: {
+                    uNewFrame: { value: null },
+                    uOldFrame: { value: null },
+                    uTime: { value: 0 },
+                    uFlipCam: { value: 1.0 },   // front camera starts mirrored
+                    uTexel: { value: new THREE.Vector2(1.0 / db.x, 1.0 / db.y) },
+
+                    uBloom: { value: 0.0 },
+                    uHorizon: { value: 0.0 },
+                    uGrain: { value: 0.0 },
+                    uStrobe: { value: 0.0 },
+
+                    uMagma: { value: 0.0 },
+                    uRipple: { value: 0.0 },
+                    uVoidGravity: { value: 0.0 },
+                    uEdgeCrawl: { value: 0.0 },
+                    uFreeze: { value: 0.0 },
+
+                    uAscii: { value: 0.0 },
+                    uHex: { value: 0.0 },
+                    uCrystal: { value: 0.0 },
+                    uVhs: { value: 0.0 },
+                    uNerve: { value: 0.0 },
+
+                    uBioHorror: { value: 0.0 },
+                    uHellPortal: { value: 0.0 },
+                    uDataRot: { value: 0.0 },
+                    uDemonCore: { value: 0.0 },
+                    uScanlinePurge: { value: 0.0 },
+
+                    uSpirit: { value: 0.0 },
+                    uSpiritExpand: { value: 1.01 },
+                    uSpiritRotate: { value: 0.0 },
+                    uSpiritAngle: { value: 0.0 },
+                    uSpiritWind: { value: 0.0 },
+
+                    uLiquid: { value: 0.0 },
+                    uVoidSpiral: { value: 0.0 },
+                    uDeepFry: { value: 0.0 },
+                    uPixelDrag: { value: 0.0 },
+                    uNeuralPulse: { value: 0.0 },
+
+                    uChronoBreaker: { value: 0.0 },
+                    uKaleidoscope: { value: 0.0 },
+                    uRGBShift: { value: 0.0 },
+                    uMosaic: { value: 0.0 },
+
+                    uGlitch: { value: 0.0 },
+                    uEdge: { value: 0.0 },
+                    uThermal: { value: 0.0 },
+                    uMirror: { value: 0.0 },
+                    uColorShift: { value: 0.0 },
+                    uFractalStrength: { value: 0.0 },
+                    uTemporalPhase: { value: 0.0 },
+                    uHyperbolicWarp: { value: 0.0 },
+                    uQuantumEntanglement: { value: 0.0 },
+                    uRealityCollapse: { value: 0.0 }
+                }
+            });
+
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+            scene.add(mesh);
+
+            // --- 4. CAMERA SYSTEM ---
+            await setupCamera(currentFacingMode, THREE);
+
+            // --- 5. UI BINDINGS ---
+            setupUI();
+            restoreState();
+
+            // --- 6. RESIZE / ADAPTIVE QUALITY ---
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(applySize, 200);
+            });
+
+            function applySize() {
+                const ratio = Math.min(window.devicePixelRatio, 2) * quality;
+                renderer.setPixelRatio(ratio);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                const sz = renderer.getDrawingBufferSize(new THREE.Vector2());
+                rtOld.setSize(sz.x, sz.y);
+                rtNew.setSize(sz.x, sz.y);
+                material.uniforms.uTexel.value.set(1.0 / sz.x, 1.0 / sz.y);
+            }
+
+            // --- 7. RENDER LOOP ---
+            let frames = 0;
+            let lastTime = performance.now();
+            let lastFrame = performance.now();
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                const t = performance.now();
+                const dt = t - lastFrame;
+                lastFrame = t;
+                if (dt > 0 && dt < 250) {
+                    const inst = 1000.0 / dt;
+                    fpsEma = fpsEma * 0.95 + inst * 0.05;
+                }
+
+                // Adaptive quality: hold ~55+ FPS, re-check at most every 1.5s
+                if (t - lastQualityAdjust > 1500) {
+                    if (fpsEma < 45 && quality > 0.45) {
+                        quality = Math.max(0.45, quality - 0.12);
+                        applySize();
+                        lastQualityAdjust = t;
+                    } else if (fpsEma > 75 && quality < 1.0) {
+                        quality = Math.min(1.0, quality + 0.08);
+                        applySize();
+                        lastQualityAdjust = t;
+                    }
+                }
+
+                frames++;
+                if (t - lastTime >= 1000) {
+                    const sz = renderer.getDrawingBufferSize(new THREE.Vector2());
+                    document.getElementById('fps-counter').innerHTML =
+                        Math.round(fpsEma) + " FPS<br>" + sz.x + "x" + sz.y + " @" + Math.round(quality * 100) + "%";
+                    frames = 0;
+                    lastTime = t;
+                }
+
+                clock += Math.min(dt, 50) * 0.001;   // time follows real elapsed time (slow-mo safe)
+                material.uniforms.uTime.value = clock;
+
+                material.uniforms.uOldFrame.value = rtOld.texture;
+
+                renderer.setRenderTarget(rtNew);
+                renderer.render(scene, camera);
+
+                renderer.setRenderTarget(null);
+                renderer.render(scene, camera);
+
+                const temp = rtOld;
+                rtOld = rtNew;
+                rtNew = temp;
+
+                if(video && video.readyState === video.HAVE_ENOUGH_DATA) {
+                    videoTexture.needsUpdate = true;
+                }
+            }
+
+            animate();
+            isWebGLReady = true;
+            clearTimeout(rescueTimer);
+            hideToast();
+
+          } catch (err) {
+            console.error(err);
+            document.getElementById('status').innerText = "FATAL ERROR: " + err.message;
+            document.getElementById('status').style.display = 'block';
+          }
+        }
+        init();
+
+        // --- HELPER FUNCTIONS ---
+
+        async function setupCamera(facingMode, THREE_REF) {
+            if (streamObject) {
+                streamObject.getTracks().forEach(track => track.stop());
+            }
+
+            // Galaxy S25: aim for 1080p60, fall back gracefully
+            const attempts = [
+                { audio: false, video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } } },
+                { audio: false, video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } } },
+                { audio: false, video: { facingMode: facingMode } },
+                { audio: false, video: true }
+            ];
+
+            let lastErr = null;
+            for (const constraints of attempts) {
+                try {
+                    streamObject = await navigator.mediaDevices.getUserMedia(constraints);
+                    lastErr = null;
+                    break;
+                } catch (e) { lastErr = e; }
+            }
+
+            if (lastErr) {
+                console.warn("Camera failed: " + lastErr.message);
+                toast("CAMERA ACCESS DENIED OR UNAVAILABLE", true);
+                return;
+            }
+
+            if (!video) {
+                video = document.createElement('video');
+                video.autoplay = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.webkitPlaysInline = true;
+            }
+
+            video.srcObject = streamObject;
+            await video.play();
+
+            if (THREE_REF) {
+                videoTexture = new THREE_REF.VideoTexture(video);
+                videoTexture.minFilter = THREE_REF.LinearFilter;
+                videoTexture.magFilter = THREE_REF.LinearFilter;
+                material.uniforms.uNewFrame.value = videoTexture;
+            }
+
+            // Mirror selfie view like a real mirror
+            material.uniforms.uFlipCam.value = (facingMode === 'user') ? 1.0 : 0.0;
+        }
+
+        async function toggleCamera() {
+            toast("SWITCHING OPTICS...", true);
+            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+            await setupCamera(currentFacingMode, null);
+            hideToast();
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(String(reader.result).split(',')[1] || '');
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        // --- PRESETS (V7) ---
+        const PRESETS = {
+            "GHOST PROTOCOL":   { spirit: 0.85, spiritexpand: 1.02, spiritrotate: 0.02, edge: 0.4, grain: 0.15 },
+            "HELLRAISER":       { hellPortal: 0.7, magma: 0.8, demonCore: 0.6, thermal: 0.3, bloom: 0.4 },
+            "MATRIX UPLINK":    { ascii: 0.9, nerve: 0.4, neuralPulse: 0.5, grain: 0.2 },
+            "ACID TRIP":        { liquid: 0.6, colorshift: 0.5, kaleidoscope: 8, deepFry: 0.6, bloom: 0.5 },
+            "VHS DEAD CHANNEL": { vhs: 0.9, grain: 0.5, glitch: 0.3, scanlinePurge: 0.4, rgbShift: 0.03 },
+            "EVENT HORIZON":    { horizon: 0.9, voidSpiral: 0.4, hyperbolicWarp: 0.3, bloom: 0.6 },
+            "STROBE SENTIENCE": { strobe: 0.5, edgeCrawl: 0.7, freeze: 0.3, ripple: 0.5 }
+        };
+
+        function zeroAll() {
+            document.querySelectorAll('input[type=range]').forEach(s => {
+                s.value = s.defaultValue;
+                s.dispatchEvent(new Event('input'));
+            });
+        }
+
+        function applyPreset(name) {
+            zeroAll();
+            const p = PRESETS[name];
+            if (!p) return;
+            for (const [id, val] of Object.entries(p)) {
+                const s = document.getElementById(id);
+                if (s) { s.value = val; s.dispatchEvent(new Event('input')); }
+            }
+            toast("PROTOCOL LOADED: " + name);
+        }
+
+        // --- STATE PERSISTENCE (V7) ---
+        let saveTimer = null;
+        function saveState() {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                try {
+                    const state = {};
+                    document.querySelectorAll('input[type=range]').forEach(s => { state[s.id] = s.value; });
+                    localStorage.setItem('omniRealityV7', JSON.stringify(state));
+                } catch (e) {}
+            }, 400);
+        }
+
+        function restoreState() {
+            try {
+                const raw = localStorage.getItem('omniRealityV7');
+                if (!raw) return;
+                const state = JSON.parse(raw);
+                for (const [id, val] of Object.entries(state)) {
+                    const s = document.getElementById(id);
+                    if (s) { s.value = val; s.dispatchEvent(new Event('input')); }
+                }
+            } catch (e) {}
+        }
+
+        function setupUI() {
+            const sliders = document.querySelectorAll('input[type=range]');
+            sliders.forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const id = e.target.id;
+                    const val = parseFloat(e.target.value);
+                    const uniformName = 'u' + id.charAt(0).toUpperCase() + id.slice(1);
+
+                    if(material.uniforms[uniformName]) {
+                        material.uniforms[uniformName].value = val;
+                    }
+
+                    const display = document.getElementById('val-' + id);
+                    if(display) display.innerText = val.toFixed(2);
+
+                    saveState();
+                });
+            });
+
+            document.getElementById('btn-menu').addEventListener('click', () => {
+                haptic();
+                document.getElementById('controls-dropdown').classList.toggle('open');
+            });
+
+            document.getElementById('btn-swap').addEventListener('click', () => {
+                haptic();
+                toggleCamera();
+            });
+
+            document.getElementById('btn-shot').addEventListener('click', async () => {
+                haptic(20);
+                try {
+                    const dataUrl = renderer.domElement.toDataURL('image/png');
+                    const b64 = dataUrl.split(',')[1];
+                    const fname = `omni-shot-${Date.now()}.png`;
+                    if (window.Omni && window.Omni.saveImage) {
+                        const ok = window.Omni.saveImage(b64, fname);
+                        toast(ok ? "SNAPSHOT SECURED" : "SAVE FAILED");
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = dataUrl;
+                        a.download = fname;
+                        a.click();
+                        toast("SNAPSHOT SECURED");
+                    }
+                } catch (e) {
+                    toast("SNAPSHOT FAILED: " + e.message);
+                }
+            });
+
+            document.getElementById('btn-reset').addEventListener('click', () => {
+                haptic(30);
+                try { localStorage.removeItem('omniRealityV7'); } catch (e) {}
+                zeroAll();
+                document.getElementById('preset-select').value = "";
+                toast("ZERO STATE ACHIEVED");
+            });
+
+            document.getElementById('preset-select').addEventListener('change', (e) => {
+                haptic();
+                if (e.target.value) applyPreset(e.target.value);
+            });
+
+            const btnRecord = document.getElementById('btn-record');
+            btnRecord.addEventListener('click', () => {
+                haptic(20);
+                if(!isRecording) {
+                    const canvas = renderer.domElement;
+                    const stream = canvas.captureStream(60);
+
+                    const format = document.getElementById('video-format').value;
+                    let mime;
+                    if (format === 'mp4') {
+                        const candidates = ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/mp4'];
+                        mime = candidates.find(m => MediaRecorder.isTypeSupported(m));
+                    }
+                    if (!mime) {
+                        const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+                        mime = candidates.find(m => MediaRecorder.isTypeSupported(m));
+                    }
+                    if (!mime) { toast("NO SUPPORTED RECORDING FORMAT"); return; }
+
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: mime,
+                        videoBitsPerSecond: 12000000
+                    });
+
+                    recordedChunks = [];
+                    mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+                    mediaRecorder.onstop = async () => {
+                        const blob = new Blob(recordedChunks, { type: mime });
+                        const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+                        const fname = `omni-reality-${Date.now()}.${ext}`;
+                        if (window.Omni && window.Omni.saveVideo) {
+                            toast("ENCODING TRANSMISSION...", true);
+                            try {
+                                const b64 = await blobToBase64(blob);
+                                const ok = window.Omni.saveVideo(b64, fname, mime.split(';')[0]);
+                                toast(ok ? "SAVED TO GALLERY" : "SAVE FAILED");
+                            } catch (e) {
+                                toast("SAVE FAILED: " + e.message);
+                            }
+                        } else {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = fname;
+                            a.click();
+                            toast("TRANSMISSION DOWNLOADED");
+                        }
+                    };
+
+                    mediaRecorder.start(250);
+                    isRecording = true;
+                    btnRecord.classList.add('recording');
+                    btnRecord.innerHTML = "&#9632; STOP";
+                } else {
+                    mediaRecorder.stop();
+                    isRecording = false;
+                    btnRecord.classList.remove('recording');
+                    btnRecord.innerHTML = "&#9679; REC";
+                }
+            });
+        }
+    </script>
+</body>
+</html>
