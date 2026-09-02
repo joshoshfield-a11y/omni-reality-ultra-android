@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>Omni-Reality ULTRA [V9: CHRONO ENGINE]</title>
+    <title>Omni-Reality ULTRA [V9.1: SLIDER SCROLL FIX]</title>
     <style>
         body {
             margin: 0;
@@ -1764,6 +1764,55 @@
             } catch (e) {}
         }
 
+        // ============ SLIDER TOUCH DRIVER [V9.1] ============
+        // Bug fix: native range inputs jump the knob to wherever a touch lands on
+        // the track and hijack the gesture, so starting a panel scroll on a slider
+        // corrupted its value. Driver rules:
+        //   tap = no-op | vertical drag = panel scrolls | horizontal drag = adjust
+        // Adjustment is RELATIVE to the starting value (drag delta mapped over the
+        // track width), so the knob never jumps no matter where the finger lands.
+        function installSliderTouchDriver() {
+            document.querySelectorAll('.control-group input[type=range]').forEach(slider => {
+                const group = slider.closest('.control-group');
+                if (!group) return;
+                slider.style.pointerEvents = 'none'; // native tap/drag off; CSS visuals intact
+                group.style.touchAction = 'pan-y';   // vertical pans scroll the panel natively
+
+                const min = parseFloat(slider.min), max = parseFloat(slider.max);
+                const step = parseFloat(slider.step) || 0.01;
+                let startX = 0, startY = 0, startVal = 0, mode = null; // null | 'scroll' | 'adjust'
+                const snap = v => Math.min(max, Math.max(min, Math.round(v / step) * step));
+                const apply = v => { slider.value = snap(v); slider.dispatchEvent(new Event('input')); };
+
+                const begin = (x, y) => { startX = x; startY = y; startVal = parseFloat(slider.value); mode = null; };
+                const move = (x, y, prevent) => {
+                    const dx = x - startX, dy = y - startY;
+                    if (!mode) {
+                        if (Math.abs(dy) > 9 && Math.abs(dy) > Math.abs(dx) * 1.2) mode = 'scroll';
+                        else if (Math.abs(dx) > 9 && Math.abs(dx) > Math.abs(dy) * 1.2) mode = 'adjust';
+                    }
+                    if (mode === 'adjust') {
+                        prevent();
+                        const w = slider.getBoundingClientRect().width || group.clientWidth || 1;
+                        apply(startVal + (dx / w) * (max - min));
+                    }
+                    // mode 'scroll': hand off silently — the browser pans the panel
+                };
+                const end = () => { mode = null; };
+
+                group.addEventListener('touchstart', e => { const t = e.touches[0]; begin(t.clientX, t.clientY); }, { passive: true });
+                group.addEventListener('touchmove', e => { const t = e.touches[0]; move(t.clientX, t.clientY, () => e.preventDefault()); }, { passive: false });
+                group.addEventListener('touchend', end);
+                group.addEventListener('touchcancel', end);
+
+                // Mouse parity (desktop / headless testing)
+                let mouseDown = false;
+                group.addEventListener('mousedown', e => { mouseDown = true; begin(e.clientX, e.clientY); });
+                window.addEventListener('mousemove', e => { if (mouseDown) move(e.clientX, e.clientY, () => e.preventDefault()); });
+                window.addEventListener('mouseup', () => { mouseDown = false; end(); });
+            });
+        }
+
         function setupUI() {
             const sliders = document.querySelectorAll('input[type=range]');
             sliders.forEach(slider => {
@@ -1895,6 +1944,8 @@
                     btnRecord.innerHTML = "&#9679; REC";
                 }
             });
+
+            installSliderTouchDriver(); // [V9.1] tap = no-op, vertical = scroll, horizontal = adjust
         }
     </script>
 </body>
