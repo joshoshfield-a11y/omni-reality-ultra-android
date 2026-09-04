@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>Omni-Reality ULTRA [V9.1: SLIDER SCROLL FIX]</title>
+    <title>Omni-Reality ULTRA [V10: TRANSCENDENCE ENGINE]</title>
     <style>
         body {
             margin: 0;
@@ -268,10 +268,54 @@
                     <option value="FLESH REACTOR">FLESH REACTOR</option>
                     <option value="CHRONO CANON">CHRONO CANON</option>
                     <option value="JANUS PROTOCOL">JANUS PROTOCOL</option>
+                    <option value="NEURO OVERLOAD">NEURO OVERLOAD [V10]</option>
+                    <option value="TIME SHATTER">TIME SHATTER [V10]</option>
+                    <option value="LEVIATHAN DREAM">LEVIATHAN DREAM [V10]</option>
+                    <option value="ENTROPY">ENTROPY [V10]</option>
+                    <option value="GRAVITY THRONE">GRAVITY THRONE [V10]</option>
                 </select>
             </div>
 
             <!-- CHRONO ENGINE (NEW V9) -->
+            <!-- TRANSCENDENCE ENGINE (NEW V10) -->
+            <div class="section-header" style="color: #ffd700; border-bottom-color: #aa8800; background: rgba(30,25,0,0.95);">// TRANSCENDENCE ENGINE [V10]</div>
+            <div class="control-group">
+                <label style="color:#ffe680">NEURO STORM <span class="value-display" id="val-neuroStorm">0.0</span></label>
+                <input type="range" id="neuroStorm" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffe680">CHRONO FRACTURE <span class="value-display" id="val-chronoFracture">0.0</span></label>
+                <input type="range" id="chronoFracture" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffe680">BIO LUMEN <span class="value-display" id="val-bioLumen">0.0</span></label>
+                <input type="range" id="bioLumen" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffe680">WORMHOLE <span class="value-display" id="val-wormhole">0.0</span></label>
+                <input type="range" id="wormhole" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffe680">PSYCHIC SCREAM <span class="value-display" id="val-psychicScream">0.0</span></label>
+                <input type="range" id="psychicScream" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffe680">MATTER DECAY <span class="value-display" id="val-matterDecay">0.0</span></label>
+                <input type="range" id="matterDecay" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffe680">ORACLE <span class="value-display" id="val-oracle">0.0</span></label>
+                <input type="range" id="oracle" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffe680">VOID STATIC <span class="value-display" id="val-voidStatic">0.0</span></label>
+                <input type="range" id="voidStatic" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ffe680">GRAVITY LENS <span class="value-display" id="val-gravityLens">0.0</span></label>
+                <input type="range" id="gravityLens" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
             <div class="section-header" style="color: #7df9ff; border-bottom-color: #227788; background: rgba(0,18,25,0.95);">// CHRONO ENGINE [V9]</div>
             <div class="control-group">
                 <label style="color:#bbeeff">DEPTH MODE</label>
@@ -713,6 +757,17 @@
                 uniform float uPossession;
                 uniform float uFlesh;
                 uniform float uAspect;
+
+                // Transcendence Engine (V10)
+                uniform float uNeuroStorm;
+                uniform float uChronoFracture;
+                uniform float uBioLumen;
+                uniform float uWormhole;
+                uniform float uPsychicScream;
+                uniform float uMatterDecay;
+                uniform float uOracle;
+                uniform float uVoidStatic;
+                uniform float uGravityLens;
 
                 // Hyperdrive (V7)
                 uniform float uBloom;
@@ -1317,6 +1372,123 @@
                         finalRGB = mix(finalRGB, fleshCol * (luma(finalRGB) + 0.35), uFlesh);
                     }
 
+                    // ============ TRANSCENDENCE ENGINE (V10) ============
+
+                    // NEURO STORM - branching electric filaments that seek out bright regions
+                    if(uNeuroStorm > 0.0) {
+                        vec2 np = uv * vec2(uAspect, 1.0) * 4.0;
+                        float nsc = 0.0;
+                        for(int ni = 0; ni < 3; ni++) {
+                            float fi = float(ni) + 1.0;
+                            np.x += 0.35 * sin(np.y * fi + uTime * (2.0 + fi));
+                            float bolt = 1.0 - abs(sin(np.x * 3.0 + vnoise(np * fi + uTime) * 5.0));
+                            nsc += pow(max(bolt, 0.0), 24.0) / fi;
+                        }
+                        float seek = 0.35 + luma(finalRGB) * 1.2;
+                        vec3 boltCol = mix(vec3(0.3, 0.5, 1.0), vec3(0.9, 0.4, 1.0), vnoise(uv * 8.0 - uTime));
+                        finalRGB += boltCol * nsc * seek * uNeuroStorm * (1.2 + uBass * uAudioReact * 1.5);
+                    }
+
+                    // CHRONO FRACTURE - shattered glass; every shard shows a different moment in time
+                    if(uChronoFracture > 0.0) {
+                        vec2 cells = vec2(9.0, 14.0);
+                        vec2 cell = floor(uv * cells);
+                        float h = rand(cell);
+                        vec2 jit = (vec2(rand(cell + 3.1), rand(cell + 7.7)) - 0.5) * uChronoFracture * 0.15;
+                        vec2 fuv = clamp(uv + jit, 0.0, 1.0);
+                        float band = fract(h * 4.0);
+                        vec3 shard;
+                        if(band < 0.25) shard = texture2D(uNewFrame, fuv).rgb;
+                        else if(band < 0.5) shard = texture2D(uHist1, fuv).rgb;
+                        else if(band < 0.75) shard = texture2D(uHist4, fuv).rgb;
+                        else shard = texture2D(uHist7, fuv).rgb;
+                        vec2 ed = abs(fract(uv * cells) - 0.5);
+                        float rim = smoothstep(0.42, 0.5, max(ed.x, ed.y));
+                        finalRGB = mix(finalRGB, shard + vec3(0.2, 0.9, 1.0) * rim * 0.6, uChronoFracture);
+                    }
+
+                    // BIO LUMEN - deep-sea bioluminescent organism fed by scene luminance
+                    if(uBioLumen > 0.0) {
+                        float bl = luma(finalRGB);
+                        float pulse = 0.5 + 0.5 * sin(uTime * 1.7 + vnoise(uv * 3.0) * 6.28);
+                        float memb = smoothstep(0.35, 0.75, vnoise(uv * 5.0 + vec2(0.0, uTime * 0.1)) + bl * 0.4);
+                        vec3 glowCol = mix(vec3(0.0, 0.4, 0.35), vec3(0.2, 1.0, 0.7), pulse);
+                        finalRGB = mix(finalRGB, glowCol * (0.3 + bl + pulse * 0.4), uBioLumen * memb);
+                    }
+
+                    // WORMHOLE - polar fall into a swirling tunnel with a glowing throat
+                    if(uWormhole > 0.0) {
+                        vec2 wp = uv - 0.5; wp.x *= uAspect;
+                        float wr = max(length(wp), 1e-4);
+                        float wa = atan(wp.y, wp.x);
+                        float depth = 0.12 / wr + uTime * (0.6 + uWormhole);
+                        float swirl = wa + wr * 6.0 * uWormhole - uTime * 0.8;
+                        vec2 wuv = vec2(fract(swirl / 6.2831), fract(depth * 0.35));
+                        vec3 tun = texture2D(uOldFrame, wuv).rgb;
+                        tun *= smoothstep(0.0, 0.25, wr);
+                        tun += vec3(0.1, 0.5, 0.9) * pow(1.0 - min(wr * 2.0, 1.0), 3.0);
+                        finalRGB = mix(finalRGB, tun, uWormhole * smoothstep(0.02, 0.3, wr + 0.02));
+                    }
+
+                    // PSYCHIC SCREAM - the frame wails: rows shear in audio-driven bursts
+                    if(uPsychicScream > 0.0) {
+                        float wail = sin(uv.y * 90.0 + uTime * 22.0) * sin(uTime * 3.7);
+                        float burst = pow(0.5 + 0.5 * sin(uTime * 0.9), 8.0);
+                        float drive = (wail * 0.5 + 0.5) * burst * (1.0 + uBass * uAudioReact * 2.0);
+                        vec2 suv = vec2(fract(uv.x + wail * 0.06 * uPsychicScream * (0.4 + drive)), uv.y);
+                        vec3 scream = texture2D(uOldFrame, suv).rgb;
+                        scream.g *= 0.4;
+                        finalRGB = mix(finalRGB, scream, uPsychicScream * (0.35 + 0.65 * burst));
+                    }
+
+                    // MATTER DECAY - the image crumbles and falls away as sand
+                    if(uMatterDecay > 0.0) {
+                        float dcol = floor(uv.x * 90.0);
+                        float dc = rand(vec2(dcol, 3.3));
+                        float fall = fract(uTime * (0.05 + dc * 0.25) * uMatterDecay);
+                        float drop = fall * fall * 0.6 * uMatterDecay;
+                        vec2 duv = vec2(uv.x, clamp(uv.y + drop, 0.0, 1.0));
+                        vec3 sand = texture2D(uOldFrame, duv).rgb;
+                        float gm = step(rand(floor(uv * vec2(90.0, 120.0)) + floor(uTime * 10.0)), uMatterDecay * 0.35);
+                        sand *= 1.0 - gm * 0.7;
+                        finalRGB = mix(finalRGB, sand, uMatterDecay * 0.9);
+                    }
+
+                    // ORACLE - rotating golden mandala of the self
+                    if(uOracle > 0.0) {
+                        vec2 op = uv - 0.5; op.x *= uAspect;
+                        float orad = length(op);
+                        float oa = atan(op.y, op.x) + uTime * 0.25;
+                        float fold = abs(fract(oa / 6.2831 * 8.0) - 0.5) * 2.0;
+                        vec2 ouv = vec2(0.5) + vec2(cos(fold * 3.14159), sin(fold * 3.14159)) * orad * vec2(1.0 / uAspect, 1.0);
+                        vec3 mand = texture2D(uNewFrame, clamp(ouv, 0.0, 1.0)).rgb;
+                        float rings = pow(0.5 + 0.5 * sin(orad * 40.0 - uTime * 2.0), 6.0);
+                        mand += vec3(1.0, 0.8, 0.3) * rings * 0.5;
+                        finalRGB = mix(finalRGB, mand, uOracle * smoothstep(0.55, 0.2, orad));
+                    }
+
+                    // VOID STATIC - dead-channel noise consumes the dark; rare inversion flashes
+                    if(uVoidStatic > 0.0) {
+                        float vs = rand(uv * vec2(917.0, 533.0) + floor(uTime * 24.0));
+                        float dark = 1.0 - smoothstep(0.0, 0.45, luma(finalRGB));
+                        vec3 stat = vec3(vs);
+                        if(rand(vec2(floor(uTime * 7.0), 11.0)) > 0.93) stat = vec3(1.0) - stat;
+                        finalRGB = mix(finalRGB, stat, uVoidStatic * (0.25 + dark * 0.75));
+                    }
+
+                    // GRAVITY LENS - a wandering well bends the scene around an Einstein ring
+                    if(uGravityLens > 0.0) {
+                        vec2 gp = vec2(0.5 + 0.3 * sin(uTime * 0.6), 0.5 + 0.25 * cos(uTime * 0.83));
+                        vec2 gd = uv - gp; gd.x *= uAspect;
+                        float gr = max(length(gd), 1e-3);
+                        float pull = uGravityLens * 0.08 / (gr * gr * 8.0 + 0.25);
+                        vec2 guv = clamp(uv - normalize(gd) * pull * vec2(1.0 / uAspect, 1.0), 0.0, 1.0);
+                        vec3 lensed = texture2D(uNewFrame, guv).rgb;
+                        float ring2 = exp(-abs(gr - 0.18) * 60.0);
+                        lensed += vec3(0.9, 0.95, 1.0) * ring2 * 0.8;
+                        finalRGB = mix(finalRGB, lensed, min(uGravityLens * 1.5, 1.0));
+                    }
+
                     // Chroma Bloom (V7) - cheap bright-pass glow
                     if(uBloom > 0.0) {
                         float rad = 0.006 + uBloom * 0.010;
@@ -1425,6 +1597,16 @@
                     uEcho: { value: 0.0 },
                     uPossession: { value: 0.0 },
                     uFlesh: { value: 0.0 },
+
+                    uNeuroStorm: { value: 0.0 },
+                    uChronoFracture: { value: 0.0 },
+                    uBioLumen: { value: 0.0 },
+                    uWormhole: { value: 0.0 },
+                    uPsychicScream: { value: 0.0 },
+                    uMatterDecay: { value: 0.0 },
+                    uOracle: { value: 0.0 },
+                    uVoidStatic: { value: 0.0 },
+                    uGravityLens: { value: 0.0 },
 
                     uBloom: { value: 0.0 },
                     uHorizon: { value: 0.0 },
@@ -1711,7 +1893,12 @@
             "FULL POSSESSION":  { possession: 0.7, rain: 0.5, vhs: 0.4, tear: 0.6, grain: 0.3 },
             "FLESH REACTOR":    { flesh: 0.8, bioHorror: 0.4, nerve: 0.5, magma: 0.4 },
             "CHRONO CANON":     { timeDepth: 0.8, timeVortex: 0.5, warpSep: 0.4, holo: 0.5, bloom: 0.4 },
-            "JANUS PROTOCOL":   { timeDepth: 0.6, janus: 0.8, lambda: 0.5, tempGlitch: 0.4, echo: 0.3 }
+            "JANUS PROTOCOL":   { timeDepth: 0.6, janus: 0.8, lambda: 0.5, tempGlitch: 0.4, echo: 0.3 },
+            "NEURO OVERLOAD":   { neuroStorm: 0.9, psychicScream: 0.6, bloom: 0.5, strobe: 0.3 },
+            "TIME SHATTER":     { chronoFracture: 0.85, timeDepth: 0.5, tempGlitch: 0.4, echo: 0.3 },
+            "LEVIATHAN DREAM":  { bioLumen: 0.8, wormhole: 0.6, oracle: 0.5, holo: 0.4 },
+            "ENTROPY":          { matterDecay: 0.8, voidStatic: 0.7, grain: 0.4, vhs: 0.3 },
+            "GRAVITY THRONE":   { gravityLens: 0.9, singularity: 0.5, horizon: 0.4, bloom: 0.5 }
         };
 
         function zeroAll() {
@@ -1741,14 +1928,14 @@
                     const state = {};
                     document.querySelectorAll('input[type=range]').forEach(s => { state[s.id] = s.value; });
                     state['__chronoMode'] = document.getElementById('chrono-mode').value;
-                    localStorage.setItem('omniRealityV9', JSON.stringify(state));
+                    localStorage.setItem('omniRealityV10', JSON.stringify(state));
                 } catch (e) {}
             }, 400);
         }
 
         function restoreState() {
             try {
-                const raw = localStorage.getItem('omniRealityV9') || localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
+                const raw = localStorage.getItem('omniRealityV10') || localStorage.getItem('omniRealityV9') || localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
                 if (!raw) return;
                 const state = JSON.parse(raw);
                 for (const [id, val] of Object.entries(state)) {
@@ -1867,7 +2054,7 @@
 
             document.getElementById('btn-reset').addEventListener('click', () => {
                 haptic(30);
-                try { localStorage.removeItem('omniRealityV9'); localStorage.removeItem('omniRealityV8'); localStorage.removeItem('omniRealityV7'); } catch (e) {}
+                try { localStorage.removeItem('omniRealityV10'); localStorage.removeItem('omniRealityV9'); localStorage.removeItem('omniRealityV8'); localStorage.removeItem('omniRealityV7'); } catch (e) {}
                 zeroAll();
                 document.getElementById('preset-select').value = "";
                 toast("ZERO STATE ACHIEVED");
