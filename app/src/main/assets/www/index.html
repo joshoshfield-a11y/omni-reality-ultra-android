@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>Omni-Reality ULTRA [V10: TRANSCENDENCE ENGINE]</title>
+    <title>Omni-Reality ULTRA [V11: MIRROR SPECTRUM]</title>
     <style>
         body {
             margin: 0;
@@ -273,6 +273,7 @@
                     <option value="LEVIATHAN DREAM">LEVIATHAN DREAM [V10]</option>
                     <option value="ENTROPY">ENTROPY [V10]</option>
                     <option value="GRAVITY THRONE">GRAVITY THRONE [V10]</option>
+                    <option value="MIRROR DEMON">MIRROR DEMON [V11]</option>
                 </select>
             </div>
 
@@ -314,6 +315,41 @@
             <div class="control-group">
                 <label style="color:#ffe680">GRAVITY LENS <span class="value-display" id="val-gravityLens">0.0</span></label>
                 <input type="range" id="gravityLens" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
+                        <!-- MIRROR SPECTRUM (NEW V11) -->
+            <div class="section-header" style="color: #ff44dd; border-bottom-color: #880066; background: rgba(30,0,25,0.95);">// MIRROR SPECTRUM [V11] &mdash; FACE LOCK + SPECTRAL ANALYSIS</div>
+            <div class="control-group">
+                <label style="color:#ff99ee">FACE WARP <span class="value-display" id="val-faceWarp">0.0</span></label>
+                <input type="range" id="faceWarp" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff99ee">FACE MANDALA <span class="value-display" id="val-faceMandala">0.0</span></label>
+                <input type="range" id="faceMandala" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff99ee">FACE ECHO <span class="value-display" id="val-faceEcho">0.0</span></label>
+                <input type="range" id="faceEcho" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff99ee">FACE ZOOM <span class="value-display" id="val-faceZoom">0.0</span></label>
+                <input type="range" id="faceZoom" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff99ee">DEMON HALO <span class="value-display" id="val-demonHalo">0.0</span></label>
+                <input type="range" id="demonHalo" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff99ee">NEON SOBEL <span class="value-display" id="val-neonSobel">0.0</span></label>
+                <input type="range" id="neonSobel" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff99ee">SLIT SCAN <span class="value-display" id="val-slitScan">0.0</span></label>
+                <input type="range" id="slitScan" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#ff99ee">FLUID DRAG <span class="value-display" id="val-fluidDrag">0.0</span></label>
+                <input type="range" id="fluidDrag" min="0.0" max="1.0" step="0.01" value="0">
             </div>
 
             <div class="section-header" style="color: #7df9ff; border-bottom-color: #227788; background: rgba(0,18,25,0.95);">// CHRONO ENGINE [V9]</div>
@@ -622,6 +658,8 @@
     </div>
 
     <script src="./three.min.js"></script>
+    <script src="./pico.js"></script>
+    <script src="./facefinder.js"></script>
 
     <!-- MAIN LOGIC -->
     <script>
@@ -768,6 +806,18 @@
                 uniform float uOracle;
                 uniform float uVoidStatic;
                 uniform float uGravityLens;
+
+                // ============ MIRROR SPECTRUM (V11) ============
+                uniform float uFaceCount;
+                uniform vec3 uFaces[4];   // (centerX, centerY, radius) in shader uv space
+                uniform float uFaceWarp;
+                uniform float uFaceMandala;
+                uniform float uFaceEcho;
+                uniform float uFaceZoom;
+                uniform float uNeonSobel;
+                uniform float uSlitScan;
+                uniform float uFluidDrag;
+                uniform float uDemonHalo;
 
                 // Hyperdrive (V7)
                 uniform float uBloom;
@@ -1023,6 +1073,50 @@
                         muv.x = abs(muv.x);
                         if(uMirror > 0.5) muv.y = abs(muv.y);
                         uv = muv + 0.5;
+                    }
+
+                    // ============ MIRROR SPECTRUM (V11) - FACE LOCK ============
+                    // uFaces[i] = (centerX, centerY, radius) in shader uv space (aspect-y units)
+
+                    // FACE ZOOM - auto-magnify onto the dominant face
+                    if(uFaceZoom > 0.0 && uFaceCount > 0.5) {
+                        vec2 fzc = uFaces[0].xy;
+                        uv = (uv - fzc) * (1.0 - 0.55 * uFaceZoom) + fzc;
+                    }
+
+                    // FACE WARP - vortex pinch centered on each detected face
+                    if(uFaceWarp > 0.0 && uFaceCount > 0.5) {
+                        for(int fi = 0; fi < 4; fi++) {
+                            float on = step(float(fi), uFaceCount - 0.5);
+                            vec3 fw = uFaces[fi];
+                            vec2 fd = uv - fw.xy;
+                            fd.x *= uAspect;
+                            float fr = max(length(fd), 1e-4);
+                            float reach = max(fw.z, 0.05) * 3.0;
+                            float infl = smoothstep(reach, 0.0, fr) * on;
+                            float swirl = uFaceWarp * infl * (2.5 + sin(uTime * 1.7 + float(fi)) * 0.8);
+                            float pinch = 1.0 - uFaceWarp * infl * 0.45;
+                            vec2 rot = vec2(cos(swirl), sin(swirl));
+                            vec2 fd2 = vec2(fd.x * rot.x - fd.y * rot.y, fd.x * rot.y + fd.y * rot.x) * pinch;
+                            fd2.x /= uAspect;
+                            uv = mix(uv, fw.xy + fd2, infl);
+                        }
+                    }
+
+                    // FACE MANDALA - kaleidoscope pivot snaps to dominant face
+                    if(uFaceMandala > 0.0 && uFaceCount > 0.5) {
+                        vec2 mc = uFaces[0].xy;
+                        vec2 mp = uv - mc;
+                        mp.x *= uAspect;
+                        float mr = length(mp);
+                        float ma = atan(mp.y, mp.x);
+                        float msegs = 5.0 + uFaceMandala * 7.0;
+                        float msegAng = 6.28318 / msegs;
+                        ma = mod(ma, msegAng);
+                        ma = abs(ma - msegAng * 0.5);
+                        vec2 kp = mr * vec2(cos(ma), sin(ma));
+                        kp.x /= uAspect;
+                        uv = mix(uv, kp + mc, uFaceMandala);
                     }
 
                     // --- STEP 2: GLITCH & PIXEL MANIPULATION ---
@@ -1546,6 +1640,75 @@
                         finalRGB = mix(finalRGB, cellCol * dotMask, uDataCloud * 0.9);
                     }
 
+                    // ============ MIRROR SPECTRUM (V11) - SPECTRAL ANALYSIS ============
+
+                    // NEON SOBEL - chromatic edge tracer; >0.5 = edges-only X-RAY SPECTRUM
+                    if(uNeonSobel > 0.0) {
+                        vec3 nb = texture2D(uNewFrame, glitchUV + vec2(0.0, uTexel.y)).rgb;
+                        vec3 ns2 = texture2D(uNewFrame, glitchUV - vec2(0.0, uTexel.y)).rgb;
+                        vec3 ne = texture2D(uNewFrame, glitchUV + vec2(uTexel.x, 0.0)).rgb;
+                        vec3 nw = texture2D(uNewFrame, glitchUV - vec2(uTexel.x, 0.0)).rgb;
+                        float nm = length((ne - nw) + (nb - ns2)) * 1.5;
+                        nm = clamp(nm, 0.0, 1.0);
+                        vec3 nneon = 0.5 + 0.5 * cos(uTime * 0.8 + vec3(0.0, 2.09, 4.18) + nm * 7.0);
+                        vec3 nwire = nneon * (pow(nm, 0.55) * 1.7 + nm * 0.3);
+                        float nXray = step(0.5, uNeonSobel);
+                        vec3 nOver = finalRGB + nwire * uNeonSobel;
+                        vec3 nOnly = nwire * 0.9 + finalRGB * 0.12 * nm;
+                        finalRGB = mix(nOver, nOnly, nXray * uNeonSobel);
+                    }
+
+                    // SLIT SCAN - each column smears a different slice of the recent past
+                    if(uSlitScan > 0.0) {
+                        float scol = floor(uv.x * 48.0);
+                        float sshift = (rand(vec2(scol, 3.7)) - 0.5) * uSlitScan * 0.4;
+                        sshift += sin(uTime * 0.7 + scol * 1.3) * 0.05 * uSlitScan;
+                        vec3 sslit = texture2D(uOldFrame, fract(glitchUV + vec2(0.0, sshift))).rgb;
+                        finalRGB = mix(finalRGB, sslit, uSlitScan * 0.75);
+                    }
+
+                    // FLUID DRAG - frame-difference flow field smears motion like wet ink
+                    if(uFluidDrag > 0.0) {
+                        float fstep = 0.008;
+                        float fL = luma(texture2D(uOldFrame, uv + vec2(-fstep, 0.0)).rgb);
+                        float fR = luma(texture2D(uOldFrame, uv + vec2(fstep, 0.0)).rgb);
+                        float fT = luma(texture2D(uOldFrame, uv + vec2(0.0, -fstep)).rgb);
+                        float fB = luma(texture2D(uOldFrame, uv + vec2(0.0, fstep)).rgb);
+                        vec2 fflow = vec2(fR - fL, fB - fT);
+                        vec3 fsmear = texture2D(uOldFrame, clamp(uv + fflow * uFluidDrag * 4.0, 0.0, 1.0)).rgb;
+                        finalRGB = mix(finalRGB, fsmear, uFluidDrag * 0.65);
+                        finalRGB += motion * uFluidDrag * vec3(0.3, 0.7, 1.0) * 2.0;
+                    }
+
+                    // FACE ECHO - temporal ghosts anchored to detected faces
+                    if(uFaceEcho > 0.0 && uFaceCount > 0.5) {
+                        for(int fi = 0; fi < 4; fi++) {
+                            float on = step(float(fi), uFaceCount - 0.5);
+                            vec2 fc = uFaces[fi].xy;
+                            float ea = (0.1 + 0.08 * float(fi)) * uFaceEcho + 0.05 * sin(uTime * 2.0 + float(fi) * 1.7);
+                            vec2 ed = uv - fc;
+                            float es = sin(ea), ec2 = cos(ea);
+                            vec2 euv = vec2(ed.x * ec2 - ed.y * es, ed.x * es + ed.y * ec2) * (1.0 + 0.05 * float(fi)) + fc;
+                            vec3 eghost = texture2D(uOldFrame, clamp(euv, 0.0, 1.0)).rgb;
+                            float efade = smoothstep(0.0, 0.05, min(min(euv.x, 1.0 - euv.x), min(euv.y, 1.0 - euv.y)));
+                            finalRGB += eghost * uFaceEcho * 0.3 * on * efade;
+                        }
+                    }
+
+                    // DEMON HALO - chromatic aura of edge energy, bound to faces
+                    if(uDemonHalo > 0.0 && uFaceCount > 0.5) {
+                        float he = getEdge(uNewFrame, glitchUV);
+                        for(int fi = 0; fi < 4; fi++) {
+                            float on = step(float(fi), uFaceCount - 0.5);
+                            vec3 hw = uFaces[fi];
+                            vec2 hd = uv - hw.xy;
+                            hd.x *= uAspect;
+                            float hzone = smoothstep(hw.z * 2.2, hw.z * 0.3, length(hd));
+                            vec3 haura = 0.5 + 0.5 * cos(uTime * 3.0 + float(fi) * 2.0 + vec3(0.0, 2.09, 4.18));
+                            finalRGB += haura * he * hzone * uDemonHalo * 2.2 * on;
+                        }
+                    }
+
                     // Film Grain (V7) - applied last so it sits on top
                     if(uGrain > 0.0) {
                         float g = rand(uv * vec2(1234.0, 876.0) + fract(uTime) * 100.0) - 0.5;
@@ -1607,6 +1770,18 @@
                     uOracle: { value: 0.0 },
                     uVoidStatic: { value: 0.0 },
                     uGravityLens: { value: 0.0 },
+
+                    // MIRROR SPECTRUM (V11)
+                    uFaceCount: { value: 0 },
+                    uFaces: { value: [new THREE.Vector3(0.5, 0.5, 0.1), new THREE.Vector3(0.5, 0.5, 0.1), new THREE.Vector3(0.5, 0.5, 0.1), new THREE.Vector3(0.5, 0.5, 0.1)] },
+                    uFaceWarp: { value: 0.0 },
+                    uFaceMandala: { value: 0.0 },
+                    uFaceEcho: { value: 0.0 },
+                    uFaceZoom: { value: 0.0 },
+                    uNeonSobel: { value: 0.0 },
+                    uSlitScan: { value: 0.0 },
+                    uFluidDrag: { value: 0.0 },
+                    uDemonHalo: { value: 0.0 },
 
                     uBloom: { value: 0.0 },
                     uHorizon: { value: 0.0 },
@@ -1742,6 +1917,9 @@
                     material.uniforms.uTreble.value = material.uniforms.uTreble.value * 0.8 + treble * 0.2;
                 }
 
+                // MIRROR SPECTRUM (V11): offline face lock side channel
+                updateFaceLock(t);
+
                 // Wire ring so uHist0 is always the NEWEST stored output frame
                 for (let hi = 0; hi < RING; hi++) {
                     const slot = (ringHead - 1 - hi + RING * 2) % RING;
@@ -1787,6 +1965,85 @@
           }
         }
         init();
+
+        // --- MIRROR SPECTRUM (V11): OFFLINE FACE LOCK (pico.js, MIT license) ---
+        // 9Hz side channel on a 160px canvas; never touches the render path.
+        let faceTracker = null;
+        function initFaceTracker() {
+            if (faceTracker || typeof pico === 'undefined' || !window.FACEFINDER_B64) return faceTracker;
+            try {
+                const bin = Uint8Array.from(atob(window.FACEFINDER_B64), ch => ch.charCodeAt(0));
+                const cascade = pico.unpack_cascade(bin);
+                const classify = (r, c, s, px, ldim) => pico.classify_region(cascade, r, c, s, px, ldim);
+                const mem = pico.instantiate_detection_memory(5);
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                faceTracker = { classify, mem, canvas, ctx, faces: [], lastRun: 0 };
+            } catch (e) { console.warn('FACE LOCK INIT FAILED: ' + e.message); }
+            return faceTracker;
+        }
+
+        function rgbaToGray(rgba, n) {
+            const g = new Uint8Array(n);
+            for (let i = 0; i < n; i++) g[i] = (0.299 * rgba[4*i] + 0.587 * rgba[4*i+1] + 0.114 * rgba[4*i+2]) | 0;
+            return g;
+        }
+
+        function updateFaceLock(now) {
+            if (!material || !video || video.readyState < 2) return;
+            const u = material.uniforms;
+            const want = (u.uFaceWarp.value > 0.01) || (u.uFaceMandala.value > 0.01) ||
+                         (u.uFaceEcho.value > 0.01) || (u.uFaceZoom.value > 0.01) ||
+                         (u.uDemonHalo.value > 0.01);
+            if (!want) { u.uFaceCount.value = 0; return; }
+            const ft = faceTracker || initFaceTracker();
+            if (!ft) return;
+            if (now - ft.lastRun < 110) return;   // ~9Hz
+            ft.lastRun = now;
+
+            const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+            const aw = 160, ah = Math.max(1, Math.round(160 * vh / vw));
+            if (ft.canvas.width !== aw) { ft.canvas.width = aw; ft.canvas.height = ah; }
+            // Draw mirror-corrected so detection coords land directly in shader uv space
+            ft.ctx.save();
+            if (u.uFlipCam.value > 0.5) { ft.ctx.translate(aw, 0); ft.ctx.scale(-1, 1); }
+            ft.ctx.drawImage(video, 0, 0, aw, ah);
+            ft.ctx.restore();
+
+            const rgba = ft.ctx.getImageData(0, 0, aw, ah).data;
+            const image = { data: rgbaToGray(rgba, aw * ah), width: aw, height: ah };
+            let dets = pico.run_cascade(image, 1, ft.classify, 0.5);
+            dets = pico.cluster_detections(dets, 0.2);
+            dets = dets.filter(d => d[3] > 35).sort((a, b) => b[3] - a[3]).slice(0, 4);
+
+            const next = [];
+            for (let i = 0; i < 4; i++) {
+                const tgt = (ft.faces[i]) || { x: 0.5, y: 0.5, r: 0.1, s: 0 };
+                if (i < dets.length) {
+                    const [r, c, s, sc] = dets[i];
+                    const dx = c / aw;                    // canvas was pre-mirrored
+                    const dy = 1.0 - (r / ah);            // GL uv is bottom-up
+                    const dr = (s / ah) * 0.5;
+                    // snap-limited EMA: floaty-smooth follow, no jitter teleport
+                    next.push({
+                        x: tgt.x + Math.max(-0.25, Math.min(0.25, dx - tgt.x)) * 0.6,
+                        y: tgt.y + Math.max(-0.25, Math.min(0.25, dy - tgt.y)) * 0.6,
+                        r: tgt.r + (dr - tgt.r) * 0.4,
+                        s: Math.min(1, sc / 100)
+                    });
+                } else {
+                    next.push({ x: tgt.x, y: tgt.y, r: tgt.r, s: Math.max(0, tgt.s - 0.15) });
+                }
+            }
+            ft.faces = next;
+            let count = 0;
+            for (let i = 0; i < 4; i++) {
+                const f = ft.faces[i];
+                u.uFaces.value[i].set(f.x, f.y, Math.max(0.02, f.r * f.s));
+                if (f.s > 0.25) count++;
+            }
+            u.uFaceCount.value = count;
+        }
 
         // --- HELPER FUNCTIONS ---
 
@@ -1898,7 +2155,8 @@
             "TIME SHATTER":     { chronoFracture: 0.85, timeDepth: 0.5, tempGlitch: 0.4, echo: 0.3 },
             "LEVIATHAN DREAM":  { bioLumen: 0.8, wormhole: 0.6, oracle: 0.5, holo: 0.4 },
             "ENTROPY":          { matterDecay: 0.8, voidStatic: 0.7, grain: 0.4, vhs: 0.3 },
-            "GRAVITY THRONE":   { gravityLens: 0.9, singularity: 0.5, horizon: 0.4, bloom: 0.5 }
+            "GRAVITY THRONE":   { gravityLens: 0.9, singularity: 0.5, horizon: 0.4, bloom: 0.5 },
+            "MIRROR DEMON":     { faceWarp: 0.7, neonSobel: 0.6, faceEcho: 0.5, demonHalo: 0.6, faceMandala: 0.25, fluidDrag: 0.2 }
         };
 
         function zeroAll() {
@@ -1928,14 +2186,14 @@
                     const state = {};
                     document.querySelectorAll('input[type=range]').forEach(s => { state[s.id] = s.value; });
                     state['__chronoMode'] = document.getElementById('chrono-mode').value;
-                    localStorage.setItem('omniRealityV10', JSON.stringify(state));
+                    localStorage.setItem('omniRealityV11', JSON.stringify(state));
                 } catch (e) {}
             }, 400);
         }
 
         function restoreState() {
             try {
-                const raw = localStorage.getItem('omniRealityV10') || localStorage.getItem('omniRealityV9') || localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
+                const raw = localStorage.getItem('omniRealityV11') || localStorage.getItem('omniRealityV10') || localStorage.getItem('omniRealityV9') || localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
                 if (!raw) return;
                 const state = JSON.parse(raw);
                 for (const [id, val] of Object.entries(state)) {

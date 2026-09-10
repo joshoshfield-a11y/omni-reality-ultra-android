@@ -48,3 +48,18 @@ Incorporated CHRONO-STUDIO v11's temporal mechanics into the WebGL pipeline (not
 - TIME LOCK: freezes the ring (chrono's HOLD-TO-FREEZE-TIME)
 - AUDIO REACT: mic analyser drives depth reach / vortex / holo (RECORD_AUDIO added)
 - 2 new presets: CHRONO CANON, JANUS PROTOCOL; saved state migrates V7/V8 -> V9
+
+## V11: MIRROR SPECTRUM (2026-09-09)
+Face recognition + spectral analysis layer (nothing removed):
+- **Offline face lock** — pico.js (MIT) bundled with embedded cascade (base64 sidecar,
+  zero network); 9Hz side channel on a 160px analysis canvas, decoupled from the render
+  loop; snap-limited EMA tracking of up to 4 faces; mirror-corrected to shader uv space
+- **FACE WARP** — vortex pinch/swirl centered on each detected face
+- **FACE MANDALA** — kaleidoscope pivot snaps to the dominant face
+- **FACE ECHO** — temporal ghosts anchored to face positions (feeds the feedback buffer)
+- **FACE ZOOM** — auto-magnify onto the dominant face
+- **DEMON HALO** — chromatic aura of Sobel edge energy, bound to faces
+- **NEON SOBEL** — full-res chromatic edge tracer; >0.5 = edges-only X-RAY SPECTRUM
+- **SLIT SCAN** — per-column time smear from the feedback buffer
+- **FLUID DRAG** — frame-difference flow field smears motion like wet ink
+- New preset: MIRROR DEMON; saved state migrates V7/V8/V9/V10 -> V11
