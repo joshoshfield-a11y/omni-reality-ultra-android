@@ -67,3 +67,8 @@ Face recognition + spectral analysis layer (nothing removed):
 
 ## V12: FACELESS ENGINE (2026-09-09)
 Landmark-level morphing layer (nothing removed): offline MediaPipe FaceMesh (chunked base64 sidecars -> Blob URLs), FACE MELT, EYE SPIRAL, JELLY JAW, MOUTH TUNNEL, GAZE PRISM, MESH VEIL wireframe overlay, FACELESS GOD preset, state migrates V7..V11 -> V12.
+
+## V12.1: FACELESS ENGINE HOTFIX (2026-09-09)
+Diagnostic HUD (top-left: PICO/MP/ANAT state + error capture), stage-logged MediaPipe init
+with 15s timeout, and automatic lploc pupil-landmark fallback (pico face box + lploc pupils)
+if MediaPipe init fails on device. versionCode 8.

@@ -691,6 +691,8 @@
     <script src="./mp_wasm.js"></script>
     <script src="./mp_assets.js"></script>
     <script src="./face_mesh.js"></script>
+    <script src="./lploc_lib.js"></script>
+    <script src="./lploc_data.js"></script>
 
     <!-- MAIN LOGIC -->
     <script>
@@ -752,6 +754,25 @@
                 location.reload();
             }, false);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
+            // V12.1 DIAGNOSTIC HUD
+            const hudEl = document.createElement('div');
+            hudEl.id = 'debug-hud';
+            hudEl.style.cssText = 'position:fixed;top:42px;left:8px;z-index:250;color:#00ffcc;font:10px/1.35 monospace;background:rgba(0,0,0,0.6);padding:2px 6px;border-radius:3px;pointer-events:none;white-space:pre;max-width:96vw;';
+            document.body.appendChild(hudEl);
+            window.__hudErr = '';
+            window.addEventListener('error', (e) => { window.__hudErr = (window.__hudErr + ' | ' + e.message).slice(-220); });
+            setInterval(() => {
+                const parts = [];
+                if (window.faceTracker) parts.push('PICO:' + (material.uniforms.uFaceCount.value|0));
+                if (window.anatEngine) {
+                    const ae = window.anatEngine;
+                    parts.push('MP:' + (ae.failed ? 'FAILED@' + (ae.stage||'?') : (ae.ready ? 'ready INF:' + (ae.infCount|0) : 'init:' + (ae.stage||'?'))) +
+                        (ae.lastErr ? ' err:' + ae.lastErr.slice(0,60) : ''));
+                } else parts.push('MP:idle');
+                parts.push('ANAT:' + (material.uniforms.uAnatCount.value|0));
+                if (window.lplocEngine) parts.push('LPL:' + (lplocEngine.eyes ? 'eyes' : 'on'));
+                hudEl.textContent = parts.join('  ') + (window.__hudErr ? ('\nERR ' + window.__hudErr) : '');
+            }, 500);
             const veilCanvas = document.createElement('canvas');
             veilCanvas.id = 'mesh-veil';
             veilCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none;display:none;';
@@ -2043,7 +2064,8 @@
                 }
 
                 // MIRROR SPECTRUM (V11): offline face lock side channel
-                updateFaceLock(t);
+                // V12.1: also drives the lploc landmark fallback, so run it when either engine wants it
+                if (faceTracker || anatWanted()) updateFaceLock(t);
                 // FACELESS ENGINE (V12): MediaPipe landmark morphing + mesh veil
                 updateAnatomy(t);
 
@@ -2096,6 +2118,7 @@
         // --- MIRROR SPECTRUM (V11): OFFLINE FACE LOCK (pico.js, MIT license) ---
         // 9Hz side channel on a 160px canvas; never touches the render path.
         let faceTracker = null;
+        window.faceTracker = null;
         function initFaceTracker() {
             if (faceTracker || typeof pico === 'undefined' || !window.FACEFINDER_B64) return faceTracker;
             try {
@@ -2163,6 +2186,8 @@
                 }
             }
             ft.faces = next;
+            ft.lastImage = image;   // shared with V12.1 landmark fallback
+            window.faceTracker = ft;
             let count = 0;
             for (let i = 0; i < 4; i++) {
                 const f = ft.faces[i];
@@ -2190,19 +2215,23 @@
                     const ext = name.slice(name.lastIndexOf('.'));
                     urls[name] = URL.createObjectURL(new Blob([bin], {type: MP_MIME[ext] || 'application/octet-stream'}));
                 }
-                const fm = new FaceMesh({ locateFile: (f) => urls[f] || f });
+                ae_stage = 'blobs-ok';
+            const fm = new FaceMesh({ locateFile: (f) => urls[f] || f });
                 fm.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
                 const veil = document.getElementById('mesh-veil');
                 const ctx = veil.getContext('2d');
-                anatEngine = { fm, veil, ctx, anat: new Float32Array(24), raw: null, decay: 0, lastRun: 0, sending: false, failed: false };
+                anatEngine = { fm, veil, ctx, anat: new Float32Array(24), raw: null, decay: 0, lastRun: 0, sending: false, failed: false, stage: 'ctor-ok', infCount: 0 };
+                window.anatEngine = anatEngine;
                 fm.onResults((res) => {
                     anatEngine.raw = (res.multiFaceLandmarks && res.multiFaceLandmarks.length) ? res.multiFaceLandmarks[0] : null;
                     anatEngine.decay = 0;
                 });
             } catch (e) {
                 console.warn('ANATOMY ENGINE INIT FAILED: ' + e.message);
-                toast('MEDIAPIPE LOAD FAILED - V11 FACE LOCK STILL ACTIVE');
-                anatEngine = { failed: true };
+                ae_note = { failed: true, stage: ae_stage, lastErr: String(e.message).slice(0,80) };
+                anatEngine = ae_note;
+                window.anatEngine = ae_note;
+                toast('MEDIAPIPE LOAD FAILED - LANDMARK FALLBACK ENGAGED');
             }
             return anatEngine;
         }
@@ -2270,16 +2299,23 @@
                 return;
             }
             const ae = initAnat();
-            if (!ae || ae.failed) return;
+            if (!ae || ae.failed) { updateFallbackAnat(now); return; }
             if (!ae.initStarted) {
                 ae.initStarted = true;
-                ae.fm.initialize().then(() => { ae.ready = true; toast('FACELESS ENGINE ONLINE'); })
-                    .catch(e => { console.warn('FM INIT: ' + e.message); ae.failed = true; toast('MEDIAPIPE INIT FAILED - V11 FALLBACK'); });
+                ae.stage = 'initializing';
+                const initTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('init timeout 15s')), 15000));
+                Promise.race([ae.fm.initialize(), initTimeout]).then(() => {
+                    ae.ready = true; ae.stage = 'ready'; toast('FACELESS ENGINE ONLINE');
+                }).catch(e => {
+                    console.warn('FM INIT: ' + e.message); ae.failed = true; ae.lastErr = String(e.message).slice(0,80);
+                    ae.stage = 'init-failed'; toast('MEDIAPIPE INIT FAILED - LANDMARK FALLBACK ENGAGED');
+                });
             }
             if (!ae.ready) return;
             if (now - ae.lastRun >= 66 && !ae.sending) {
                 ae.lastRun = now; ae.sending = true;
-                ae.fm.send({ image: video }).catch(e => console.warn('FM SEND: ' + e.message))
+                ae.fm.send({ image: video }).then(() => { ae.infCount = (ae.infCount||0) + 1; })
+                    .catch(e => { console.warn('FM SEND: ' + e.message); ae.lastErr = String(e.message).slice(0,80); })
                     .finally(() => { ae.sending = false; });
             }
             if (ae.raw) {
@@ -2294,6 +2330,63 @@
             }
             if (veilAmt > 0.01) { v.style.display = 'block'; drawVeil(ae.raw, veilAmt); }
             else if (v.style.display !== 'none') v.style.display = 'none';
+        }
+
+
+
+        // --- V12.1 LANDMARK FALLBACK: pico box + lploc pupils (proven offline architecture) ---
+        let lplocEngine = null;
+        window.lplocEngine = null;
+        function initLploc() {
+            if (lplocEngine || typeof lploc === 'undefined' || !window.PUPLOC_B64) return lplocEngine;
+            try {
+                const bin = Uint8Array.from(atob(window.PUPLOC_B64), ch => ch.charCodeAt(0));
+                const pup = lploc.unpack_localizer(bin);
+                lplocEngine = { pup, eyes: false, lastRun: 0 };
+                window.lplocEngine = lplocEngine;
+                toast('LANDMARK FALLBACK ACTIVE (pico + lploc)');
+            } catch (e) {
+                console.warn('LPLoc init failed: ' + e.message);
+                lplocEngine = { failed: true };
+                window.lplocEngine = lplocEngine;
+            }
+            return lplocEngine;
+        }
+        function updateFallbackAnat(now) {
+            const ft = window.faceTracker;
+            if (!ft || !ft.lastImage || !ft.faces || !ft.faces.length) return;
+            const f0 = ft.faces[0];
+            if (f0.s < 0.25) return;   // need a live, confident face box
+            const le = initLploc();
+            if (!le || le.failed) return;
+            if (now - le.lastRun < 100) return;
+            le.lastRun = now;
+            const img = ft.lastImage;          // {data, width, height} grayscale
+            const h = img.height, w = img.width;
+            // face box -> canvas coords (rows, cols)
+            const fr = (1 - f0.y) * h, fc = f0.x * w, fs = Math.max(f0.r * h * 2.0, 8);
+            const pixels = { pixels: img.data, nrows: h, ncols: w, ldim: w };
+            const eyeS = Math.max(0.35 * fs, 6);
+            // tehnokv canonical eye anchors relative to face box
+            const leRC = le.pup(fr - 0.075 * fs, fc - 0.175 * fs, eyeS, 11, pixels);
+            const reRC = le.pup(fr - 0.075 * fs, fc + 0.175 * fs, eyeS, 11, pixels);
+            const flip = material.uniforms.uFlipCam.value > 0.5;
+            const uX = (c) => { const x = c / w; return flip ? 1 - x : x; };
+            const uY = (r) => 1 - r / h;
+            const A = anatEngine && anatEngine.smooth ? anatEngine.smooth : (anatEngine.smooth = new Float32Array(24));
+            const t = [f0.x, f0.y, Math.max(f0.r * 1.15, 0.08),
+                       uX(leRC[1]), uY(leRC[0]), 0.55,
+                       uX(reRC[1]), uY(reRC[0]), 0.55,
+                       uX(fc), uY(fr + 0.22 * fs), 0.35,
+                       uX(fc), uY(fr - 0.05 * fs), 0.1,
+                       uX(fc), uY(fr - 0.10 * fs), 0,
+                       0, 0, Math.min(1, fs / h * 1.6),
+                       f0.x, uY(fr + 0.38 * fs), 0.5];
+            for (let i = 0; i < 24; i++) A[i] += (t[i] - A[i]) * 0.5;
+            const u = material.uniforms;
+            for (let i = 0; i < 8; i++) u.uAnat.value[i].set(A[3*i], A[3*i+1], A[3*i+2]);
+            u.uAnatCount.value = 1;
+            le.eyes = true;
         }
 
         // --- HELPER FUNCTIONS ---
