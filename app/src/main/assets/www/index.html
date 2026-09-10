@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <title>Omni-Reality ULTRA [V11: MIRROR SPECTRUM]</title>
+    <title>Omni-Reality ULTRA [V12: FACELESS ENGINE]</title>
     <style>
         body {
             margin: 0;
@@ -274,6 +274,7 @@
                     <option value="ENTROPY">ENTROPY [V10]</option>
                     <option value="GRAVITY THRONE">GRAVITY THRONE [V10]</option>
                     <option value="MIRROR DEMON">MIRROR DEMON [V11]</option>
+                    <option value="FACELESS GOD">FACELESS GOD [V12]</option>
                 </select>
             </div>
 
@@ -318,6 +319,33 @@
             </div>
 
                         <!-- MIRROR SPECTRUM (NEW V11) -->
+                        <!-- FACELESS ENGINE (V12) -->
+            <div class="section-header" style="color: #66ffcc; border-bottom-color: #117755; background: rgba(0,28,20,0.95);">// FACELESS ENGINE [V12] &mdash; LANDMARK MORPHING</div>
+            <div class="control-group">
+                <label style="color:#aaffdd">FACE MELT <span class="value-display" id="val-faceMelt">0.0</span></label>
+                <input type="range" id="faceMelt" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#aaffdd">EYE SPIRAL <span class="value-display" id="val-eyeSpiral">0.0</span></label>
+                <input type="range" id="eyeSpiral" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#aaffdd">JELLY JAW <span class="value-display" id="val-jawWarp">0.0</span></label>
+                <input type="range" id="jawWarp" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#aaffdd">MOUTH TUNNEL <span class="value-display" id="val-mouthTunnel">0.0</span></label>
+                <input type="range" id="mouthTunnel" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#aaffdd">GAZE PRISM <span class="value-display" id="val-gazePrism">0.0</span></label>
+                <input type="range" id="gazePrism" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+            <div class="control-group">
+                <label style="color:#aaffdd">MESH VEIL <span class="value-display" id="val-meshVeil">0.0</span></label>
+                <input type="range" id="meshVeil" min="0.0" max="1.0" step="0.01" value="0">
+            </div>
+
             <div class="section-header" style="color: #ff44dd; border-bottom-color: #880066; background: rgba(30,0,25,0.95);">// MIRROR SPECTRUM [V11] &mdash; FACE LOCK + SPECTRAL ANALYSIS</div>
             <div class="control-group">
                 <label style="color:#ff99ee">FACE WARP <span class="value-display" id="val-faceWarp">0.0</span></label>
@@ -660,6 +688,9 @@
     <script src="./three.min.js"></script>
     <script src="./pico.js"></script>
     <script src="./facefinder.js"></script>
+    <script src="./mp_wasm.js"></script>
+    <script src="./mp_assets.js"></script>
+    <script src="./face_mesh.js"></script>
 
     <!-- MAIN LOGIC -->
     <script>
@@ -721,6 +752,10 @@
                 location.reload();
             }, false);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
+            const veilCanvas = document.createElement('canvas');
+            veilCanvas.id = 'mesh-veil';
+            veilCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none;display:none;';
+            document.getElementById('canvas-container').appendChild(veilCanvas);
 
             scene = new THREE.Scene();
             camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -818,6 +853,16 @@
                 uniform float uSlitScan;
                 uniform float uFluidDrag;
                 uniform float uDemonHalo;
+
+                // ============ FACELESS ENGINE (V12) ============
+                uniform float uAnatCount;
+                uniform vec3 uAnat[8];
+                uniform float uFaceMelt;
+                uniform float uEyeSpiral;
+                uniform float uJawWarp;
+                uniform float uMouthTunnel;
+                uniform float uGazePrism;
+                uniform float uMeshVeil;   // JS-side overlay toggle (no shader cost)
 
                 // Hyperdrive (V7)
                 uniform float uBloom;
@@ -1117,6 +1162,60 @@
                         vec2 kp = mr * vec2(cos(ma), sin(ma));
                         kp.x /= uAspect;
                         uv = mix(uv, kp + mc, uFaceMandala);
+                    }
+
+                    // ============ FACELESS ENGINE (V12) - ANATOMY WARP ============
+
+                    // FACE MELT - noise-swirl dissolves the whole face region
+                    if(uFaceMelt > 0.0 && uAnatCount > 0.5) {
+                        vec3 mw0 = uAnat[0];
+                        vec2 md0 = uv - mw0.xy;
+                        md0.x *= uAspect;
+                        float meltZone = smoothstep(mw0.z * 1.8, mw0.z * 0.15, length(md0));
+                        float meltAng = uFaceMelt * meltZone * (1.1 + 0.6 * sin(uTime * 0.7));
+                        float ma0 = atan(md0.y, md0.x) + meltAng;
+                        float mr0 = length(md0) * (1.0 - meltZone * uFaceMelt * 0.12);
+                        vec2 md1 = vec2(cos(ma0), sin(ma0)) * mr0;
+                        md1.x /= uAspect;
+                        uv = mix(uv, mw0.xy + md1, meltZone);
+                        uv += meltZone * uFaceMelt * 0.05 * vec2(
+                            vnoise(uv * 8.0 + uTime * 0.9) - 0.5,
+                            vnoise(uv * 8.0 + 31.7 - uTime * 0.8) - 0.5);
+                    }
+
+                    // EYE SPIRAL - twin vortices at the eyes; openness feeds the pull
+                    if(uEyeSpiral > 0.0 && uAnatCount > 0.5) {
+                        for(int ei = 0; ei < 2; ei++) {
+                            vec3 ew = uAnat[1 + ei];
+                            float eon = ew.z * step(0.01, ew.z);
+                            vec2 ed = uv - ew.xy;
+                            ed.x *= uAspect;
+                            float er = max(length(ed), 1e-4);
+                            float eR = 0.09 + 0.06 * eon;
+                            float ein = smoothstep(eR * 2.6, 0.0, er) * uEyeSpiral * (0.4 + 0.6 * eon);
+                            float ea2 = atan(ed.y, ed.x) + ein * (3.0 + sin(uTime * 2.2 + float(ei) * 3.1) * 1.2);
+                            vec2 ed2 = vec2(cos(ea2), sin(ea2)) * er * (1.0 - ein * 0.5);
+                            ed2.x /= uAspect;
+                            uv = mix(uv, ew.xy + ed2, clamp(ein * 2.0, 0.0, 1.0));
+                        }
+                    }
+
+                    // JELLY JAW - chin region wobbles like struck gelatin
+                    if(uJawWarp > 0.0 && uAnatCount > 0.5) {
+                        vec3 jw = uAnat[7];
+                        vec2 jd = uv - jw.xy;
+                        jd.x *= uAspect;
+                        float jR = max(uAnat[0].z * 0.85, 0.06);
+                        float jZone = smoothstep(jR * 1.3, 0.0, length(jd));
+                        float jWob = sin(uv.x * 34.0 + uTime * 7.0) * 0.5 +
+                                     sin(uv.x * 61.0 - uTime * 11.0) * 0.3;
+                        uv.y += jWob * uJawWarp * jZone * 0.045 * (0.6 + 0.4 * sin(uTime * 3.0));
+                    }
+
+                    // GAZE PRISM - the world bends where you look
+                    if(uGazePrism > 0.0 && uAnatCount > 0.5) {
+                        vec2 gv = vec2(uAnat[5].z, uAnat[6].x);
+                        uv += gv * uGazePrism * 0.04;
                     }
 
                     // --- STEP 2: GLITCH & PIXEL MANIPULATION ---
@@ -1709,6 +1808,22 @@
                         }
                     }
 
+                    // ============ FACELESS ENGINE (V12) - ANATOMY FEEDBACK ============
+
+                    // MOUTH TUNNEL - the mouth opens a feedback wormhole
+                    if(uMouthTunnel > 0.0 && uAnatCount > 0.5) {
+                        float mOpen = uAnat[3].z;
+                        if(mOpen > 0.04) {
+                            vec2 mC = uAnat[3].xy;
+                            vec2 mUv = (uv - mC) * (1.0 - mOpen * uMouthTunnel * 0.92) + mC;
+                            vec3 mTun = texture2D(uOldFrame, clamp(mUv, 0.0, 1.0)).rgb;
+                            vec2 mD = uv - mC; mD.x *= uAspect;
+                            float mZone = smoothstep(0.16 + mOpen * 0.2, 0.02, length(mD));
+                            finalRGB = mix(finalRGB, mTun, mZone * uMouthTunnel);
+                            finalRGB += vec3(0.4, 0.1, 0.5) * mZone * mOpen * uMouthTunnel * 0.8;
+                        }
+                    }
+
                     // Film Grain (V7) - applied last so it sits on top
                     if(uGrain > 0.0) {
                         float g = rand(uv * vec2(1234.0, 876.0) + fract(uTime) * 100.0) - 0.5;
@@ -1782,6 +1897,16 @@
                     uSlitScan: { value: 0.0 },
                     uFluidDrag: { value: 0.0 },
                     uDemonHalo: { value: 0.0 },
+
+                    // FACELESS ENGINE (V12)
+                    uAnatCount: { value: 0 },
+                    uAnat: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
+                    uFaceMelt: { value: 0.0 },
+                    uEyeSpiral: { value: 0.0 },
+                    uJawWarp: { value: 0.0 },
+                    uMouthTunnel: { value: 0.0 },
+                    uGazePrism: { value: 0.0 },
+                    uMeshVeil: { value: 0.0 },
 
                     uBloom: { value: 0.0 },
                     uHorizon: { value: 0.0 },
@@ -1919,6 +2044,8 @@
 
                 // MIRROR SPECTRUM (V11): offline face lock side channel
                 updateFaceLock(t);
+                // FACELESS ENGINE (V12): MediaPipe landmark morphing + mesh veil
+                updateAnatomy(t);
 
                 // Wire ring so uHist0 is always the NEWEST stored output frame
                 for (let hi = 0; hi < RING; hi++) {
@@ -2045,6 +2172,130 @@
             u.uFaceCount.value = count;
         }
 
+        // --- FACELESS ENGINE (V12): MEDIAPIPE LANDMARK MORPHING (offline, blob-URL loaded) ---
+        let anatEngine = null;   // { fm, veil, ctx, anat, raw, decay, lastRun, sending, failed }
+        function anatWanted() {
+            const u = material.uniforms;
+            return (u.uFaceMelt.value > 0.01) || (u.uEyeSpiral.value > 0.01) ||
+                   (u.uJawWarp.value > 0.01) || (u.uMouthTunnel.value > 0.01) ||
+                   (u.uGazePrism.value > 0.01) || (u.uMeshVeil.value > 0.01);
+        }
+        function initAnat() {
+            if (anatEngine || typeof FaceMesh === 'undefined' || !window.MP_B64) return anatEngine;
+            try {
+                const MP_MIME = {'.js':'text/javascript','.wasm':'application/wasm','.binarypb':'application/octet-stream','.data':'application/octet-stream'};
+                const urls = {};
+                for (const [name, b64] of Object.entries(window.MP_B64)) {
+                    const bin = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
+                    const ext = name.slice(name.lastIndexOf('.'));
+                    urls[name] = URL.createObjectURL(new Blob([bin], {type: MP_MIME[ext] || 'application/octet-stream'}));
+                }
+                const fm = new FaceMesh({ locateFile: (f) => urls[f] || f });
+                fm.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+                const veil = document.getElementById('mesh-veil');
+                const ctx = veil.getContext('2d');
+                anatEngine = { fm, veil, ctx, anat: new Float32Array(24), raw: null, decay: 0, lastRun: 0, sending: false, failed: false };
+                fm.onResults((res) => {
+                    anatEngine.raw = (res.multiFaceLandmarks && res.multiFaceLandmarks.length) ? res.multiFaceLandmarks[0] : null;
+                    anatEngine.decay = 0;
+                });
+            } catch (e) {
+                console.warn('ANATOMY ENGINE INIT FAILED: ' + e.message);
+                toast('MEDIAPIPE LOAD FAILED - V11 FACE LOCK STILL ACTIVE');
+                anatEngine = { failed: true };
+            }
+            return anatEngine;
+        }
+        const MESH_LINES = [
+            [61,185],[185,40],[40,39],[39,37],[37,0],[0,267],[267,269],[269,270],[270,409],[409,291],
+            [291,375],[375,321],[321,405],[405,314],[314,17],[17,84],[84,181],[181,91],[91,146],[146,61],
+            [13,14],[78,95],[95,88],[88,178],[178,87],[87,14],[14,317],[317,402],[402,318],[318,324],[324,308],
+            [263,249],[249,390],[390,373],[373,374],[374,380],[380,381],[381,382],[382,263],
+            [33,246],[246,161],[161,160],[160,159],[159,158],[158,157],[157,33],
+            [473,474],[474,475],[475,476],[476,477],[477,473],
+            [468,469],[469,470],[470,471],[471,472],[472,468],
+            [70,63],[63,105],[105,66],[66,107],[107,55],[55,65],[65,52],[52,53],[53,46],
+            [300,293],[293,334],[334,296],[296,336],[336,285],[285,295],[295,282],[282,283],[283,380],
+            [6,197],[197,195],[195,5],[5,4],
+            [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13],[13,14],[14,15],[15,16]
+        ];
+        function packAnat(lm) {
+            const flip = material.uniforms.uFlipCam.value > 0.5;
+            const px = (i) => { const x = lm[i].x; return flip ? 1 - x : x; };
+            const py = (i) => 1 - lm[i].y;
+            const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
+            const faceW = Math.max(d(263, 33), d(234, 454), 1e-4);
+            const out = anatEngine.anat;
+            out[0]=(px(4)+px(152))*0.5; out[1]=(py(4)+py(152))*0.5; out[2]=Math.max(faceW * 1.25, 0.08);
+            out[3]=px(473); out[4]=py(473); out[5]=Math.min(1, d(159,145)/faceW*6);
+            out[6]=px(468); out[7]=py(468); out[8]=Math.min(1, d(386,374)/faceW*6);
+            out[9]=px(13);  out[10]=py(13); out[11]=Math.min(1, d(13,14)/faceW*5);
+            out[12]=px(4); out[13]=py(4); out[14]=Math.min(1, d(107,473)/faceW*4);
+            const gzL = (lm[473].x - (lm[33].x + lm[133].x) * 0.5) / Math.max(d(33,133), 1e-4);
+            const gzR = (lm[468].x - (lm[362].x + lm[263].x) * 0.5) / Math.max(d(362,263), 1e-4);
+            out[15]=(px(107)+px(336))*0.5; out[16]=(py(107)+py(336))*0.5; out[17]=(gzL+gzR)*0.5;
+            out[18]=((lm[473].y - (lm[159].y + lm[145].y) * 0.5) + (lm[468].y - (lm[386].y + lm[374].y) * 0.5)) * 0.5 / Math.max(d(159,145), 1e-4);
+            out[19]=Math.min(1, d(132,361)/faceW);
+            out[20]=px(152); out[21]=py(152); out[22]=Math.min(1, d(152,4)/faceW*2);
+            out[23]=0;
+        }
+        function drawVeil(lm, veilAmt) {
+            const ae = anatEngine;
+            const c = ae.veil, x = ae.ctx;
+            if (c.width !== innerWidth || c.height !== innerHeight) { c.width = innerWidth; c.height = innerHeight; }
+            x.clearRect(0, 0, c.width, c.height);
+            if (!lm || veilAmt <= 0.01) return;
+            const flip = material.uniforms.uFlipCam.value > 0.5;
+            const px = (i) => (flip ? 1 - lm[i].x : lm[i].x) * c.width;
+            const py = (i) => lm[i].y * c.height;
+            const hue = (performance.now() * 0.05) % 360;
+            x.strokeStyle = 'hsla(' + hue + ',100%,60%,' + Math.min(1, veilAmt) + ')';
+            x.lineWidth = 1.5;
+            x.beginPath();
+            for (const pr of MESH_LINES) { x.moveTo(px(pr[0]), py(pr[0])); x.lineTo(px(pr[1]), py(pr[1])); }
+            x.stroke();
+            if (veilAmt > 0.5) {
+                x.fillStyle = 'hsla(' + ((hue + 120) % 360) + ',100%,70%,0.8)';
+                for (let i = 0; i < lm.length; i += 6) { x.fillRect(px(i) - 1, py(i) - 1, 2, 2); }
+            }
+        }
+        function updateAnatomy(now) {
+            if (!material || !video || video.readyState < 2) return;
+            const u = material.uniforms;
+            const veilAmt = u.uMeshVeil.value;
+            const v = document.getElementById('mesh-veil');
+            if (!anatWanted()) {
+                u.uAnatCount.value = 0;
+                if (v.style.display !== 'none') v.style.display = 'none';
+                return;
+            }
+            const ae = initAnat();
+            if (!ae || ae.failed) return;
+            if (!ae.initStarted) {
+                ae.initStarted = true;
+                ae.fm.initialize().then(() => { ae.ready = true; toast('FACELESS ENGINE ONLINE'); })
+                    .catch(e => { console.warn('FM INIT: ' + e.message); ae.failed = true; toast('MEDIAPIPE INIT FAILED - V11 FALLBACK'); });
+            }
+            if (!ae.ready) return;
+            if (now - ae.lastRun >= 66 && !ae.sending) {
+                ae.lastRun = now; ae.sending = true;
+                ae.fm.send({ image: video }).catch(e => console.warn('FM SEND: ' + e.message))
+                    .finally(() => { ae.sending = false; });
+            }
+            if (ae.raw) {
+                packAnat(ae.raw);
+                const A = ae.smooth || (ae.smooth = new Float32Array(24));
+                for (let i = 0; i < 24; i++) A[i] += (ae.anat[i] - A[i]) * 0.45;
+                for (let i = 0; i < 8; i++) u.uAnat.value[i].set(A[3*i], A[3*i+1], A[3*i+2]);
+                u.uAnatCount.value = 1;
+            } else {
+                ae.decay = (ae.decay || 0) + 1;
+                if (ae.decay > 20) u.uAnatCount.value = 0;
+            }
+            if (veilAmt > 0.01) { v.style.display = 'block'; drawVeil(ae.raw, veilAmt); }
+            else if (v.style.display !== 'none') v.style.display = 'none';
+        }
+
         // --- HELPER FUNCTIONS ---
 
         async function setupCamera(facingMode, THREE_REF) {
@@ -2156,7 +2407,8 @@
             "LEVIATHAN DREAM":  { bioLumen: 0.8, wormhole: 0.6, oracle: 0.5, holo: 0.4 },
             "ENTROPY":          { matterDecay: 0.8, voidStatic: 0.7, grain: 0.4, vhs: 0.3 },
             "GRAVITY THRONE":   { gravityLens: 0.9, singularity: 0.5, horizon: 0.4, bloom: 0.5 },
-            "MIRROR DEMON":     { faceWarp: 0.7, neonSobel: 0.6, faceEcho: 0.5, demonHalo: 0.6, faceMandala: 0.25, fluidDrag: 0.2 }
+            "MIRROR DEMON":     { faceWarp: 0.7, neonSobel: 0.6, faceEcho: 0.5, demonHalo: 0.6, faceMandala: 0.25, fluidDrag: 0.2 },
+            "FACELESS GOD":     { faceMelt: 0.55, eyeSpiral: 0.7, jawWarp: 0.35, mouthTunnel: 0.6, gazePrism: 0.25, meshVeil: 0.7, demonHalo: 0.4 }
         };
 
         function zeroAll() {
@@ -2186,14 +2438,14 @@
                     const state = {};
                     document.querySelectorAll('input[type=range]').forEach(s => { state[s.id] = s.value; });
                     state['__chronoMode'] = document.getElementById('chrono-mode').value;
-                    localStorage.setItem('omniRealityV11', JSON.stringify(state));
+                    localStorage.setItem('omniRealityV12', JSON.stringify(state));
                 } catch (e) {}
             }, 400);
         }
 
         function restoreState() {
             try {
-                const raw = localStorage.getItem('omniRealityV11') || localStorage.getItem('omniRealityV10') || localStorage.getItem('omniRealityV9') || localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
+                const raw = localStorage.getItem('omniRealityV12') || localStorage.getItem('omniRealityV11') || localStorage.getItem('omniRealityV10') || localStorage.getItem('omniRealityV9') || localStorage.getItem('omniRealityV8') || localStorage.getItem('omniRealityV7');
                 if (!raw) return;
                 const state = JSON.parse(raw);
                 for (const [id, val] of Object.entries(state)) {

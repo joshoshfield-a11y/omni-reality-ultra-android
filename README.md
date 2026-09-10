@@ -63,3 +63,7 @@ Face recognition + spectral analysis layer (nothing removed):
 - **SLIT SCAN** — per-column time smear from the feedback buffer
 - **FLUID DRAG** — frame-difference flow field smears motion like wet ink
 - New preset: MIRROR DEMON; saved state migrates V7/V8/V9/V10 -> V11
+
+
+## V12: FACELESS ENGINE (2026-09-09)
+Landmark-level morphing layer (nothing removed): offline MediaPipe FaceMesh (chunked base64 sidecars -> Blob URLs), FACE MELT, EYE SPIRAL, JELLY JAW, MOUTH TUNNEL, GAZE PRISM, MESH VEIL wireframe overlay, FACELESS GOD preset, state migrates V7..V11 -> V12.
