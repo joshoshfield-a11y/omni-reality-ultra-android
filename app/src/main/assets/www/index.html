@@ -1175,7 +1175,7 @@
                         vec2 mp = uv - mc;
                         mp.x *= uAspect;
                         float mr = length(mp);
-                        float ma = atan(mp.y, mp.x);
+                        float ma = atan(mp.y, mp.x + 1e-6);
                         float msegs = 5.0 + uFaceMandala * 7.0;
                         float msegAng = 6.28318 / msegs;
                         ma = mod(ma, msegAng);
@@ -1194,7 +1194,7 @@
                         md0.x *= uAspect;
                         float meltZone = smoothstep(mw0.z * 1.8, mw0.z * 0.15, length(md0));
                         float meltAng = uFaceMelt * meltZone * (1.1 + 0.6 * sin(uTime * 0.7));
-                        float ma0 = atan(md0.y, md0.x) + meltAng;
+                        float ma0 = atan(md0.y, md0.x + 1e-6) + meltAng;
                         float mr0 = length(md0) * (1.0 - meltZone * uFaceMelt * 0.12);
                         vec2 md1 = vec2(cos(ma0), sin(ma0)) * mr0;
                         md1.x /= uAspect;
@@ -1214,7 +1214,7 @@
                             float er = max(length(ed), 1e-4);
                             float eR = 0.09 + 0.06 * eon;
                             float ein = smoothstep(eR * 2.6, 0.0, er) * uEyeSpiral * (0.4 + 0.6 * eon);
-                            float ea2 = atan(ed.y, ed.x) + ein * (3.0 + sin(uTime * 2.2 + float(ei) * 3.1) * 1.2);
+                            float ea2 = atan(ed.y, ed.x + 1e-6) + ein * (3.0 + sin(uTime * 2.2 + float(ei) * 3.1) * 1.2);
                             vec2 ed2 = vec2(cos(ea2), sin(ea2)) * er * (1.0 - ein * 0.5);
                             ed2.x /= uAspect;
                             uv = mix(uv, ew.xy + ed2, clamp(ein * 2.0, 0.0, 1.0));
@@ -1238,6 +1238,9 @@
                         vec2 gv = vec2(uAnat[5].z, uAnat[6].x);
                         uv += gv * uGazePrism * 0.04;
                     }
+
+                    // V12.2: contain any uv excursion before sampling/feedback
+                    uv = clamp(uv, vec2(-0.5), vec2(1.5));
 
                     // --- STEP 2: GLITCH & PIXEL MANIPULATION ---
 
@@ -2144,7 +2147,10 @@
             const u = material.uniforms;
             const want = (u.uFaceWarp.value > 0.01) || (u.uFaceMandala.value > 0.01) ||
                          (u.uFaceEcho.value > 0.01) || (u.uFaceZoom.value > 0.01) ||
-                         (u.uDemonHalo.value > 0.01);
+                         (u.uDemonHalo.value > 0.01) ||
+                         (u.uFaceMelt.value > 0.01) || (u.uEyeSpiral.value > 0.01) ||
+                         (u.uJawWarp.value > 0.01) || (u.uMouthTunnel.value > 0.01) ||
+                         (u.uGazePrism.value > 0.01) || (u.uMeshVeil.value > 0.01);
             if (!want) { u.uFaceCount.value = 0; return; }
             const ft = faceTracker || initFaceTracker();
             if (!ft) return;
@@ -2373,7 +2379,7 @@
             const flip = material.uniforms.uFlipCam.value > 0.5;
             const uX = (c) => { const x = c / w; return flip ? 1 - x : x; };
             const uY = (r) => 1 - r / h;
-            const A = anatEngine && anatEngine.smooth ? anatEngine.smooth : (anatEngine.smooth = new Float32Array(24));
+            const A = le.smooth || (le.smooth = new Float32Array(24));   // V12.2: own buffer — anatEngine is null on the fallback path
             const t = [f0.x, f0.y, Math.max(f0.r * 1.15, 0.08),
                        uX(leRC[1]), uY(leRC[0]), 0.55,
                        uX(reRC[1]), uY(reRC[0]), 0.55,

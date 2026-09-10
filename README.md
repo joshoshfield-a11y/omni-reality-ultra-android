@@ -72,3 +72,8 @@ Landmark-level morphing layer (nothing removed): offline MediaPipe FaceMesh (chu
 Diagnostic HUD (top-left: PICO/MP/ANAT state + error capture), stage-logged MediaPipe init
 with 15s timeout, and automatic lploc pupil-landmark fallback (pico face box + lploc pupils)
 if MediaPipe init fails on device. versionCode 8.
+
+## V12.2: NaN + fallback starvation hotfix (2026-09-09)
+atan(0,0) UB guards in FACE MANDALA/FACE MELT/EYE SPIRAL (grey-screen on Adreno/Mali),
+V12 sliders now wake the pico detector (lploc fallback no longer starves when only V12
+FX are up), uv containment after anatomy warps. versionCode 9.
